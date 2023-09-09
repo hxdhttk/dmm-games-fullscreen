@@ -18,9 +18,7 @@
 
   const targetFrame = gameFrame ?? frame1;
 
-  if (!targetFrame) {
-    console.log("The target frame was not found!");
-  } else {
+  if (targetFrame) {
     console.log("Add fullscreen trigger.");
     window.addEventListener("keydown", (ev) => {
       if (ev.key === "v") {
@@ -30,16 +28,15 @@
   }
 
   const setCanvasSize = () => {
-    const gameCanvas = document.querySelector("#unity-canvas");
-    const gameDiv = document.querySelector("#GameDiv");
+    const unityCanvas = document.querySelector("#unity-canvas");
+    const gameCanvas = document.querySelector("#GameCanvas");
 
-    const targetEl = gameCanvas ?? gameDiv;
+    const targetElement = unityCanvas ?? gameCanvas;
 
-    if (!targetEl) {
-      console.log("The game element was not found!.");
+    if (!targetElement) {
       return;
     } else {
-      if (targetEl.style.width === `${window.innerWidth}px`) {
+      if (targetElement.style.width === `${window.innerWidth}px`) {
         return;
       } else {
         console.log("Hide bottom content.");
@@ -50,9 +47,9 @@
 
         console.log("Set game element size.");
         const [width, height] = [window.innerWidth, window.innerHeight];
-        if (targetEl) {
-          targetEl.style.width = `${width}px`;
-          targetEl.style.height = `${height}px`;
+        if (targetElement) {
+          targetElement.style.width = `${width}px`;
+          targetElement.style.height = `${height}px`;
         }
       }
     }
