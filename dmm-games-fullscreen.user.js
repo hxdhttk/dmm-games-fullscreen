@@ -23,7 +23,11 @@
   if (!gameFrame) {
     console.log("The game frame was not found!");
   } else {
-    gameFrame.requestFullscreen();
+    document.addEventListener("keydown", (_, ev) => {
+      if (ev.key === "v") {
+        gameFrame.requestFullscreen();
+      }
+    });
   }
 
   const canvases = document.querySelectorAll("canvas");
