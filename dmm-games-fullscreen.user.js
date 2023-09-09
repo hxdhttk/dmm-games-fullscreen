@@ -44,7 +44,7 @@
       console.log("The Unity canvas was not found!.");
       return;
     } else {
-      if (unityCanvas.style.width === window.innerWidth) {
+      if (unityCanvas.style.width === `${window.innerWidth}px`) {
         return;
       } else {
         console.log("Hide bottom content.");
@@ -56,8 +56,8 @@
         console.log("Set canvas size.");
         const [width, height] = [window.innerWidth, window.innerHeight];
         if (unityCanvas) {
-          unityCanvas.style.width = width;
-          unityCanvas.style.height = height;
+          unityCanvas.style.width = `${width}px`;
+          unityCanvas.style.height = `${height}px`;
         }
       }
     }
