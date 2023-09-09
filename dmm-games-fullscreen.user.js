@@ -63,5 +63,5 @@
     }
   };
 
-  window.setInterval(setCanvasSize, 100);
+  window.setInterval(setCanvasSize, 500);
 })();
