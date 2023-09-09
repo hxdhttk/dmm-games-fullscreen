@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.1
-// @description  Enable full screen on DMM browser games.
+// @version      0.2
+// @description  Enable fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
 // @match        *://*.dmm.com/*
