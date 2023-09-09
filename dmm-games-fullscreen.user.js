@@ -31,7 +31,7 @@
     });
   }
 
-  const setSize = () => {
+  const setCanvasSize = () => {
     const canvases = document.querySelectorAll("canvas");
     let unityCanvas = undefined;
     for (const canvas of canvases) {
@@ -40,27 +40,28 @@
       }
     }
 
-    if (unityCanvas.style.width === window.innerWidth) {
-      return;
-    }
-
     if (!unityCanvas) {
       console.log("The Unity canvas was not found!.");
+      return;
     } else {
-      console.log("Hide bottom content.");
-      const pcBottom = document.querySelector("#pcbottom");
-      if (pcBottom) {
-        pcBottom.style.display = "none";
-      }
+      if (unityCanvas.style.width === window.innerWidth) {
+        return;
+      } else {
+        console.log("Hide bottom content.");
+        const pcBottom = document.querySelector("#pcbottom");
+        if (pcBottom) {
+          pcBottom.style.display = "none";
+        }
 
-      console.log("Set canvas size.");
-      const [width, height] = [window.innerWidth, window.innerHeight];
-      if (unityCanvas) {
-        unityCanvas.style.width = width;
-        unityCanvas.style.height = height;
+        console.log("Set canvas size.");
+        const [width, height] = [window.innerWidth, window.innerHeight];
+        if (unityCanvas) {
+          unityCanvas.style.width = width;
+          unityCanvas.style.height = height;
+        }
       }
     }
   };
 
-  window.setInterval(setSize, 100);
+  window.setInterval(setCanvasSize, 100);
 })();
