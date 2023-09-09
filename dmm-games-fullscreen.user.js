@@ -6,45 +6,40 @@
 // @author       Me
 // @match        *://*.dmm.co.jp/*
 // @match        *://*.dmm.com/*
+// @match        *://*.mist-train-girls.com/*
 // @grant        none
 // ==/UserScript==
 
 (function () {
   "use strict";
 
-  const iFrames = document.querySelectorAll("iframe");
-  let gameFrame = undefined;
-  for (const iFrame of iFrames) {
-    if (iFrame.id === "game_frame") {
-      gameFrame = iFrame;
-    }
-  }
+  const gameFrame = document.querySelector("#game_frame");
+  const frame1 = document.querySelector("#frm1");
 
-  if (!gameFrame) {
-    console.log("The game frame was not found!");
+  const targetFrame = gameFrame ?? frame1;
+
+  if (!targetFrame) {
+    console.log("The target frame was not found!");
   } else {
     console.log("Add fullscreen trigger.");
     window.addEventListener("keydown", (ev) => {
       if (ev.key === "v") {
-        void gameFrame.requestFullscreen();
+        void targetFrame.requestFullscreen();
       }
     });
   }
 
   const setCanvasSize = () => {
-    const canvases = document.querySelectorAll("canvas");
-    let unityCanvas = undefined;
-    for (const canvas of canvases) {
-      if (canvas.id === "unity-canvas") {
-        unityCanvas = canvas;
-      }
-    }
+    const gameCanvas = document.querySelector("#unity-canvas");
+    const gameDiv = document.querySelector("#GameDiv");
 
-    if (!unityCanvas) {
-      console.log("The Unity canvas was not found!.");
+    const targetEl = gameCanvas ?? gameDiv;
+
+    if (!targetEl) {
+      console.log("The game element was not found!.");
       return;
     } else {
-      if (unityCanvas.style.width === `${window.innerWidth}px`) {
+      if (targetEl.style.width === `${window.innerWidth}px`) {
         return;
       } else {
         console.log("Hide bottom content.");
@@ -53,11 +48,11 @@
           pcBottom.style.display = "none";
         }
 
-        console.log("Set canvas size.");
+        console.log("Set game element size.");
         const [width, height] = [window.innerWidth, window.innerHeight];
-        if (unityCanvas) {
-          unityCanvas.style.width = `${width}px`;
-          unityCanvas.style.height = `${height}px`;
+        if (targetEl) {
+          targetEl.style.width = `${width}px`;
+          targetEl.style.height = `${height}px`;
         }
       }
     }
