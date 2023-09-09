@@ -23,7 +23,7 @@
   if (!gameFrame) {
     console.log("The game frame was not found!");
   } else {
-    document.addEventListener("keydown", (_, ev) => {
+    window.addEventListener("keydown", (_, ev) => {
       if (ev.key === "v") {
         gameFrame.requestFullscreen();
       }
