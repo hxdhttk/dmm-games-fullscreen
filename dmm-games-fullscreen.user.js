@@ -23,33 +23,44 @@
   if (!gameFrame) {
     console.log("The game frame was not found!");
   } else {
+    console.log("Add fullscreen trigger.");
     window.addEventListener("keydown", (ev) => {
       if (ev.key === "v") {
-        gameFrame.requestFullscreen();
+        void gameFrame.requestFullscreen();
       }
     });
   }
 
-  const canvases = document.querySelectorAll("canvas");
-  let unityCanvas = undefined;
-  for (const canvas of canvases) {
-    if (canvas.id === "unity-canvas") {
-      unityCanvas = canvas;
-    }
-  }
-
-  if (!unityCanvas) {
-    console.log("The unity canvas was not found!.");
-  } else {
-    const pcBottom = document.querySelector("#pcbottom");
-    if (pcBottom) {
-      pcBottom.style.display = "none";
+  const setSize = () => {
+    const canvases = document.querySelectorAll("canvas");
+    let unityCanvas = undefined;
+    for (const canvas of canvases) {
+      if (canvas.id === "unity-canvas") {
+        unityCanvas = canvas;
+      }
     }
 
-    const [width, height] = [window.innerWidth, window.innerHeight];
-    if (unityCanvas) {
-      unityCanvas.style.width = width;
-      unityCanvas.style.height = height;
+    if (unityCanvas.style.width === window.innerWidth) {
+      return;
     }
-  }
+
+    if (!unityCanvas) {
+      console.log("The Unity canvas was not found!.");
+    } else {
+      console.log("Hide bottom content.");
+      const pcBottom = document.querySelector("#pcbottom");
+      if (pcBottom) {
+        pcBottom.style.display = "none";
+      }
+
+      console.log("Set canvas size.");
+      const [width, height] = [window.innerWidth, window.innerHeight];
+      if (unityCanvas) {
+        unityCanvas.style.width = width;
+        unityCanvas.style.height = height;
+      }
+    }
+  };
+
+  window.setInterval(setSize, 100);
 })();
