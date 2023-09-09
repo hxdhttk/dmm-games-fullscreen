@@ -29,27 +29,38 @@
 
   const setCanvasSize = () => {
     const unityCanvas = document.querySelector("#unity-canvas");
-    const gameCanvas = document.querySelector("#GameCanvas");
+    const [gameDiv, gameContainer, gameCanvas] = [
+      document.querySelector("#GameDiv"),
+      document.querySelector("#Cocos2dGameContainer"),
+      document.querySelector("#GameCanvas"),
+    ];
 
-    const targetElement = unityCanvas ?? gameCanvas;
+    const setMethod = unityCanvas !== null ? 1 : gameDiv !== null ? 2 : 0;
+    const targetElement =
+      setMethod === 1 ? unityCanvas : setMethod === 2 ? gameCanvas : null;
 
-    if (!targetElement) {
+    if (setMethod == 0) {
       return;
     } else {
       if (targetElement.style.width === `${window.innerWidth}px`) {
         return;
       } else {
-        console.log("Hide bottom content.");
         const pcBottom = document.querySelector("#pcbottom");
         if (pcBottom) {
+          console.log("Hide bottom content.");
           pcBottom.style.display = "none";
         }
 
         console.log("Set game element size.");
         const [width, height] = [window.innerWidth, window.innerHeight];
-        if (targetElement) {
-          targetElement.style.width = `${width}px`;
-          targetElement.style.height = `${height}px`;
+        if (setMethod === 1) {
+          unityCanvas.style.width = `${width}px`;
+          unityCanvas.style.height = `${height}px`;
+        } else if (setMethod === 2) {
+          [gameDiv, gameContainer, gameCanvas].forEach((e) => {
+            e.style.width = `${width}px`;
+            e.style.height = `${height}px`;
+          });
         }
       }
     }
