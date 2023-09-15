@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.3
 // @description  Enable fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -15,8 +15,9 @@
 
   const gameFrame = document.querySelector("#game_frame");
   const frame1 = document.querySelector("#frm1");
+  const gameCanvas = document.querySelector("#GameCanvas");
 
-  const targetFrame = gameFrame ?? frame1;
+  const targetFrame = gameFrame ?? frame1 ?? gameCanvas;
 
   if (targetFrame) {
     console.log("Add fullscreen trigger.");
@@ -29,15 +30,9 @@
 
   const setCanvasSize = () => {
     const unityCanvas = document.querySelector("#unity-canvas");
-    const [gameDiv, gameContainer, gameCanvas] = [
-      document.querySelector("#GameDiv"),
-      document.querySelector("#Cocos2dGameContainer"),
-      document.querySelector("#GameCanvas"),
-    ];
 
-    const setMethod = unityCanvas !== null ? 1 : gameDiv !== null ? 2 : 0;
-    const targetElement =
-      setMethod === 1 ? unityCanvas : setMethod === 2 ? gameCanvas : null;
+    const setMethod = unityCanvas !== null ? 1 : 0;
+    const targetElement = setMethod === 1 ? unityCanvas : null;
 
     if (setMethod == 0) {
       return;
@@ -56,11 +51,6 @@
         if (setMethod === 1) {
           unityCanvas.style.width = `${width}px`;
           unityCanvas.style.height = `${height}px`;
-        } else if (setMethod === 2) {
-          [gameDiv, gameContainer, gameCanvas].forEach((e) => {
-            e.style.width = `${width}px`;
-            e.style.height = `${height}px`;
-          });
         }
       }
     }
