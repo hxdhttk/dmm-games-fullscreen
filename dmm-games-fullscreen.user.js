@@ -16,7 +16,10 @@
   const gameFrame = document.querySelector("#game_frame");
   const gameCanvas = document.querySelector("#GameDiv");
 
-  if (gameFrame && document.location.origin.toLocaleLowerCase().includes("mist")) {
+  if (
+    gameFrame &&
+    document.location.href.toLocaleLowerCase().includes("mist")
+  ) {
     return;
   }
 
@@ -25,6 +28,7 @@
     console.log("Add fullscreen trigger.");
     window.addEventListener("keydown", (ev) => {
       if (ev.key === "v") {
+        console.log("Requesting fullscreen:", targetFrame);
         void targetFrame.requestFullscreen();
       }
     });
