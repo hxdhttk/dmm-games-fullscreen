@@ -14,11 +14,13 @@
   "use strict";
 
   const gameFrame = document.querySelector("#game_frame");
-  const frame1 = document.querySelector("#frm1");
-  const gameCanvas = document.querySelector("#GameCanvas");
+  const gameCanvas = document.querySelector("#GameDiv");
 
-  const targetFrame = gameFrame ?? frame1 ?? gameCanvas;
+  if (gameFrame && document.location.origin.toLocaleLowerCase().includes("mist")) {
+    return;
+  }
 
+  const targetFrame = gameFrame ?? gameCanvas;
   if (targetFrame) {
     console.log("Add fullscreen trigger.");
     window.addEventListener("keydown", (ev) => {
