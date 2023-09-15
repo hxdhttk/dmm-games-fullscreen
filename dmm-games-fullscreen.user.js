@@ -16,52 +16,53 @@
   const gameFrame = document.querySelector("#game_frame");
   const gameCanvas = document.querySelector("#GameDiv");
 
-  if (
-    gameFrame &&
-    document.location.href.toLocaleLowerCase().includes("mist")
-  ) {
-    return;
+  if (gameFrame) {
+    if (document.location.href.toLocaleLowerCase().includes("mist")) {
+      return;
+    } else {
+      console.log("Add fullscreen trigger trigger.");
+      window.addEventListener("keydown", (ev) => {
+        if (ev.key === "v") {
+          window.postMessage(ev.key, "https://assets.mist-train-girls.com");
+        }
+      });
+    }
   }
 
-  const targetFrame = gameFrame ?? gameCanvas;
-  if (targetFrame) {
+  if (gameFrame) {
     console.log("Add fullscreen trigger.");
-    window.addEventListener(
-      "keydown",
-      (ev) => {
-        if (ev.key === "v") {
-          console.log("Requesting fullscreen:", targetFrame);
-          void targetFrame.requestFullscreen();
-        }
-      },
-      true
-    );
+    window.addEventListener("keydown", (ev) => {
+      if (ev.key === "v") {
+        console.log("Requesting fullscreen:", gameFrame);
+        void gameFrame.requestFullscreen();
+      }
+    });
+  } else if (gameCanvas) {
+    console.log("Add CORS fullscreen trigger.");
+    window.addEventListener("message", (ev) => {
+      if (ev.data === "v") {
+        console.log("Requesting fullscreen:", gameCanvas);
+        gameCanvas.requestFullscreen();
+      }
+    });
   }
 
   const setCanvasSize = () => {
+    const pcBottom = document.querySelector("#pcbottom");
+    if (pcBottom) {
+      console.log("Hide bottom content.");
+      pcBottom.style.display = "none";
+    }
+
     const unityCanvas = document.querySelector("#unity-canvas");
-
-    const setMethod = unityCanvas !== null ? 1 : 0;
-    const targetElement = setMethod === 1 ? unityCanvas : null;
-
-    if (setMethod == 0) {
-      return;
-    } else {
-      if (targetElement.style.width === `${window.innerWidth}px`) {
+    if (unityCanvas) {
+      if (unityCanvas.style.width === `${window.innerWidth}px`) {
         return;
       } else {
-        const pcBottom = document.querySelector("#pcbottom");
-        if (pcBottom) {
-          console.log("Hide bottom content.");
-          pcBottom.style.display = "none";
-        }
-
         console.log("Set game element size.");
         const [width, height] = [window.innerWidth, window.innerHeight];
-        if (setMethod === 1) {
-          unityCanvas.style.width = `${width}px`;
-          unityCanvas.style.height = `${height}px`;
-        }
+        unityCanvas.style.width = `${width}px`;
+        unityCanvas.style.height = `${height}px`;
       }
     }
   };
