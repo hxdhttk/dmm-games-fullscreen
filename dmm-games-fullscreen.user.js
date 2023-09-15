@@ -18,14 +18,13 @@
 
   if (gameFrame) {
     if (document.location.href.toLocaleLowerCase().includes("mist")) {
-      return;
-    } else {
       console.log("Add fullscreen trigger trigger.");
       window.addEventListener("keydown", (ev) => {
         if (ev.key === "v") {
           window.postMessage(ev.key, "https://assets.mist-train-girls.com");
         }
       });
+    } else {
     }
   }
 
