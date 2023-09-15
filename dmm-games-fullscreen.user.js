@@ -16,17 +16,11 @@
   const gameFrame = document.querySelector("#game_frame");
   const gameCanvas = document.querySelector("#GameDiv");
 
-  if (gameFrame) {
-    if (document.location.href.toLocaleLowerCase().includes("mist")) {
-      console.log("Add fullscreen trigger trigger.");
-      window.addEventListener("keydown", (ev) => {
-        if (ev.key === "v") {
-          window.postMessage(ev.key, "https://assets.mist-train-girls.com");
-        }
-      });
-    } else {
-      return;
-    }
+  if (
+    gameFrame &&
+    document.location.href.toLocaleLowerCase().includes("mist")
+  ) {
+    return;
   }
 
   if (gameFrame) {
@@ -38,13 +32,13 @@
       }
     });
   } else if (gameCanvas) {
-    console.log("Add CORS fullscreen trigger.");
-    window.addEventListener("message", (ev) => {
-      if (ev.data === "v") {
-        console.log("Requesting fullscreen:", gameCanvas);
-        gameCanvas.requestFullscreen();
-      }
-    });
+    const fullscreenButton = document.createElement("button");
+    const buttonText = document.createTextNode("Click to trigger fullscreen");
+    fullscreenButton.appendChild(buttonText);
+    fullscreenButton.onclick = () => {
+      gameCanvas.requestFullscreen();
+    };
+    document.body.insertBefore(fullscreenButton, gameCanvas);
   }
 
   const setCanvasSize = () => {
