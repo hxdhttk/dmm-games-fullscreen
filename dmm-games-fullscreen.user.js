@@ -26,12 +26,18 @@
   const targetFrame = gameFrame ?? gameCanvas;
   if (targetFrame) {
     console.log("Add fullscreen trigger.");
-    window.addEventListener("keydown", (ev) => {
+    document.onkeydown((ev) => {
       if (ev.key === "v") {
         console.log("Requesting fullscreen:", targetFrame);
         void targetFrame.requestFullscreen();
       }
     });
+    // window.addEventListener("keydown", (ev) => {
+    //   if (ev.key === "v") {
+    //     console.log("Requesting fullscreen:", targetFrame);
+    //     void targetFrame.requestFullscreen();
+    //   }
+    // });
   }
 
   const setCanvasSize = () => {
