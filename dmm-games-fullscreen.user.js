@@ -32,12 +32,20 @@
       }
     });
   } else if (gameCanvas) {
+    console.log("Add fullscreen button.");
     const fullscreenButton = document.createElement("button");
-    const buttonText = document.createTextNode("Click to trigger fullscreen");
+    const buttonText = document.createTextNode("Fullscreen");
     fullscreenButton.appendChild(buttonText);
     fullscreenButton.onclick = () => {
-      gameCanvas.requestFullscreen();
+      console.log("Requesting fullscreen:", gameCanvas);
+      void gameCanvas.requestFullscreen();
     };
+    fullscreenButton.style.fontSize = "12px";
+    fullscreenButton.style.position = "fixed";
+    fullscreenButton.style.top = "0px";
+    fullscreenButton.style.left = "0px";
+    fullscreenButton.style.zIndex = "1";
+
     document.body.insertBefore(fullscreenButton, gameCanvas);
   }
 
