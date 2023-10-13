@@ -79,6 +79,10 @@
       }
     }
 
+    if (document.location.href.toLocaleLowerCase().includes("mist")) {
+      return;
+    }
+
     const gameDiv = document.querySelector("#GameDiv");
     const gameContainer = document.querySelector("#Cocos2dGameContainer");
     const gameCanvas = document.querySelector("#GameCanvas");
