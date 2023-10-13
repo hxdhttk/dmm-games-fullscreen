@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.4
+// @version      0.5
 // @description  Enable fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -14,9 +14,9 @@
 (function () {
   "use strict";
 
-  const gameFrame = document.querySelector("#game_frame");
-  const gameIFrame = document.querySelector("#game-iframe");
-  const gameCanvas = document.querySelector("#GameDiv");
+  const gameFrame = document.getElementById("game_frame");
+  const gameIFrame = document.getElementById("game-iframe");
+  const gameCanvas = document.getElementById("GameDiv");
 
   if (
     gameFrame &&
@@ -61,13 +61,13 @@
   }
 
   const setCanvasSize = () => {
-    const pcBottom = document.querySelector("#pcbottom");
+    const pcBottom = document.getElementById("pcbottom");
     if (pcBottom) {
       console.log("Hide bottom content.");
       pcBottom.style.display = "none";
     }
 
-    const unityCanvas = document.querySelector("#unity-canvas");
+    const unityCanvas = document.getElementById("unity-canvas");
     if (unityCanvas) {
       if (unityCanvas.style.width === `${window.innerWidth}px`) {
         return;
@@ -83,9 +83,9 @@
       return;
     }
 
-    const gameDiv = document.querySelector("#GameDiv");
-    const gameContainer = document.querySelector("#Cocos2dGameContainer");
-    const gameCanvas = document.querySelector("#GameCanvas");
+    const gameDiv = document.getElementById("GameDiv");
+    const gameContainer = document.getElementById("Cocos2dGameContainer");
+    const gameCanvas = document.getElementById("GameCanvas");
     if (gameContainer) {
       const windowWidth = `${window.innerWidth}px`;
       const windowHeight = `${window.innerHeight}px`;
