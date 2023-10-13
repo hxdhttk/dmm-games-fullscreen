@@ -25,6 +25,13 @@
     return;
   }
 
+  if (
+    gameFrame &&
+    document.location.href.toLocaleLowerCase().includes("deepone")
+  ) {
+    return;
+  }
+
   if (gameFrame || gameIFrame) {
     const targetFrame = gameFrame ?? gameIFrame;
 
@@ -44,14 +51,11 @@
       console.log("Requesting fullscreen:", gameCanvas);
       void gameCanvas.requestFullscreen();
     };
-    fullscreenButton.style = {
-      ...fullscreenButton.style,
-      fontSize: "12px",
-      position: "fixed",
-      top: "0px",
-      left: "0px",
-      zIndex: "1",
-    };
+    fullscreenButton.style.fontSize = "12px";
+    fullscreenButton.style.position = "fixed";
+    fullscreenButton.style.top = "0px";
+    fullscreenButton.style.left = "0px";
+    fullscreenButton.style.zIndex = "1";
 
     document.body.insertBefore(fullscreenButton, gameCanvas);
   }
