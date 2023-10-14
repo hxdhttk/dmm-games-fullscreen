@@ -29,12 +29,21 @@
   const setGameIFrameFullscreen = () => {
     const gameIFrame = document.getElementById("game-iframe");
     if (gameIFrame) {
-      window.addEventListener("keydown", (ev) => {
-        if (ev.key === "v") {
-          console.log("Requesting fullscreen:", gameIFrame);
-          void gameIFrame.requestFullscreen();
-        }
-      });
+      console.log("Add fullscreen button.");
+      const fullscreenButton = document.createElement("button");
+      const buttonText = document.createTextNode("Fullscreen");
+      fullscreenButton.appendChild(buttonText);
+      fullscreenButton.onclick = () => {
+        console.log("Requesting fullscreen:", gameIFrame);
+        void gameIFrame.requestFullscreen();
+      };
+      fullscreenButton.style.fontSize = "12px";
+      fullscreenButton.style.position = "fixed";
+      fullscreenButton.style.top = "0px";
+      fullscreenButton.style.left = "0px";
+      fullscreenButton.style.zIndex = "1";
+
+      document.body.insertBefore(fullscreenButton, gameIFrame);
     } else {
       window.setTimeout(setGameIFrameFullscreen, 500);
     }
