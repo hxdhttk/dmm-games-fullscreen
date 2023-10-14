@@ -30,9 +30,6 @@
     const gameIFrame = document.getElementById("game-iframe");
     const gameMainDiv = document.getElementById("game-main");
     if (gameIFrame && gameMainDiv) {
-      gameIFrame.style.width = screen.width + "px";
-      gameIFrame.style.height = screen.height + "px";
-
       console.log("Add fullscreen button.");
       const fullscreenButton = document.createElement("button");
       const buttonText = document.createTextNode("Fullscreen");
