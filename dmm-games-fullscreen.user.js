@@ -15,7 +15,7 @@
   "use strict";
 
   const gameFrame = document.getElementById("game_frame");
-  const gameIFrames = document.getElementsByTagName("iframe");
+  const gameIFrame = document.getElementById("game-iframe");
   const gameCanvas = document.getElementById("GameDiv");
 
   if (
@@ -30,14 +30,6 @@
     document.location.href.toLocaleLowerCase().includes("deepone")
   ) {
     return;
-  }
-
-  let gameIFrame;
-  for (const el of gameIFrames) {
-    if (el.id.toLocaleLowerCase().includes("game")) {
-      gameIFrame = el;
-      break;
-    }
   }
 
   if (gameFrame || gameIFrame) {
