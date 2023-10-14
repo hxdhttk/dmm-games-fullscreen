@@ -30,6 +30,8 @@
     const gameIFrame = document.getElementById("game-iframe");
     const gameMainDiv = document.getElementById("game-main");
     if (gameIFrame && gameMainDiv) {
+      gameIFrame.style = undefined;
+
       console.log("Add fullscreen button.");
       const fullscreenButton = document.createElement("button");
       const buttonText = document.createTextNode("Fullscreen");
@@ -112,7 +114,10 @@
       const windowWidth = `${window.innerWidth}px`;
       const windowHeight = `${window.innerHeight}px`;
 
-      if (gameDiv.style.width === windowWidth) {
+      if (
+        gameDiv.style.width === windowWidth &&
+        gameDiv.style.height === windowHeight
+      ) {
         return;
       } else {
         console.log("Set game element size.");
