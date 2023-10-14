@@ -31,7 +31,7 @@
     if (gameIFrame) {
       window.addEventListener("keydown", (ev) => {
         if (ev.key === "v") {
-          console.log("Requesting fullscreen:", gameFgameIFramerame);
+          console.log("Requesting fullscreen:", gameIFrame);
           void gameIFrame.requestFullscreen();
         }
       });
