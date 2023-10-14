@@ -14,10 +14,10 @@
 (function () {
   "use strict";
 
-  const isMist = document.location.href.toLocaleLowerCase().includes("mist");
-  const isDeepOne = document.location.href
-    .toLocaleLowerCase()
-    .includes("deepone");
+  const isMist = () =>
+    document.location.href.toLocaleLowerCase().includes("mist");
+  const isDeepOne = () =>
+    document.location.href.toLocaleLowerCase().includes("deepone");
 
   const gameFrame = document.getElementById("game_frame");
   const gameCanvas = document.getElementById("GameDiv");
