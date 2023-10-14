@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.5
+// @version      0.6
 // @description  Enable fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -14,35 +14,47 @@
 (function () {
   "use strict";
 
+  const isMist = document.location.href.toLocaleLowerCase().includes("mist");
+  const isDeepOne = document.location.href
+    .toLocaleLowerCase()
+    .includes("deepone");
+
   const gameFrame = document.getElementById("game_frame");
-  const gameIFrame = document.getElementById("game-iframe");
   const gameCanvas = document.getElementById("GameDiv");
 
-  if (
-    gameFrame &&
-    document.location.href.toLocaleLowerCase().includes("mist")
-  ) {
+  if (gameFrame && (isMist() || isDeepOne())) {
     return;
   }
 
-  if (
-    gameFrame &&
-    document.location.href.toLocaleLowerCase().includes("deepone")
-  ) {
-    return;
+  const setGameIFrameFullscreen = () => {
+    const gameIFrame = document.getElementById("game-iframe");
+    if (gameIFrame) {
+      window.addEventListener("keydown", (ev) => {
+        if (ev.key === "v") {
+          console.log("Requesting fullscreen:", gameFgameIFramerame);
+          void gameIFrame.requestFullscreen();
+        }
+      });
+    } else {
+      window.setTimeout(setGameIFrameFullscreen, 500);
+    }
+  };
+
+  if (isDeepOne()) {
+    if (document.location.href.toLocaleLowerCase().includes("dmm.com")) {
+      setTimeout(setGameIFrameFullscreen, 500);
+    }
   }
 
-  if (gameFrame || gameIFrame) {
-    const targetFrame = gameFrame ?? gameIFrame;
-
+  if (gameFrame) {
     console.log("Add fullscreen trigger.");
     window.addEventListener("keydown", (ev) => {
       if (ev.key === "v") {
-        console.log("Requesting fullscreen:", targetFrame);
-        void targetFrame.requestFullscreen();
+        console.log("Requesting fullscreen:", gameFrame);
+        void gameFrame.requestFullscreen();
       }
     });
-  } else if (gameCanvas) {
+  } else if (gameCanvas && isMist()) {
     console.log("Add fullscreen button.");
     const fullscreenButton = document.createElement("button");
     const buttonText = document.createTextNode("Fullscreen");
@@ -79,7 +91,7 @@
       }
     }
 
-    if (document.location.href.toLocaleLowerCase().includes("mist")) {
+    if (isMist()) {
       return;
     }
 
