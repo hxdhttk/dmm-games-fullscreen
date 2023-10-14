@@ -55,9 +55,25 @@
 
     if (gameIFrame) {
       if (document.fullscreenElement) {
+        if (
+          gameIFrame.style.width === screen.width + "px" &&
+          gameIFrame.style.height === screen.height + "px"
+        ) {
+          return;
+        }
+
+        console.log("Set game element size when fullscreen.");
         gameIFrame.style.width = screen.width + "px";
         gameIFrame.style.height = screen.height + "px";
       } else {
+        if (
+          gameIFrame.style.width === 0.75 * screen.width + "px" &&
+          gameIFrame.style.height === 0.75 * screen.height + "px"
+        ) {
+          return;
+        }
+
+        console.log("Set game element size.");
         gameIFrame.style.width = 0.75 * screen.width + "px";
         gameIFrame.style.height = 0.75 * screen.height + "px";
       }
@@ -66,7 +82,8 @@
 
   if (isDeepOne()) {
     if (document.location.href.toLocaleLowerCase().includes("dmm.com")) {
-      setTimeout(setGameIFrameFullscreen, 500);
+      window.setInterval(setGameIFrameSize, 300);
+      window.setTimeout(setGameIFrameFullscreen, 500);
     }
   }
 
