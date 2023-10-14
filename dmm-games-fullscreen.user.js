@@ -50,6 +50,20 @@
     }
   };
 
+  const setGameIFrameSize = () => {
+    const gameIFrame = document.getElementById("game-iframe");
+
+    if (gameIFrame) {
+      if (document.fullscreenElement) {
+        gameIFrame.style.width = screen.width + "px";
+        gameIFrame.style.height = screen.height + "px";
+      } else {
+        gameIFrame.style.width = 0.75 * screen.width + "px";
+        gameIFrame.style.height = 0.75 * screen.height + "px";
+      }
+    }
+  };
+
   if (isDeepOne()) {
     if (document.location.href.toLocaleLowerCase().includes("dmm.com")) {
       setTimeout(setGameIFrameFullscreen, 500);
