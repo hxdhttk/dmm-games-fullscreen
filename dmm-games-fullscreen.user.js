@@ -30,6 +30,9 @@
     const gameIFrame = document.getElementById("game-iframe");
     const gameMainDiv = document.getElementById("game-main");
     if (gameIFrame && gameMainDiv) {
+      gameIFrame.style.width = screen.width + "px";
+      gameIFrame.style.height = screen.height + "px";
+
       console.log("Add fullscreen button.");
       const fullscreenButton = document.createElement("button");
       const buttonText = document.createTextNode("Fullscreen");
@@ -50,39 +53,8 @@
     }
   };
 
-  const setGameIFrameSize = () => {
-    const gameIFrame = document.getElementById("game-iframe");
-
-    if (gameIFrame) {
-      if (document.fullscreenElement) {
-        if (
-          gameIFrame.style.width === screen.width + "px" &&
-          gameIFrame.style.height === screen.height + "px"
-        ) {
-          return;
-        }
-
-        console.log("Set game element size when fullscreen.");
-        gameIFrame.style.width = screen.width + "px";
-        gameIFrame.style.height = screen.height + "px";
-      } else {
-        if (
-          gameIFrame.style.width === 0.75 * screen.width + "px" &&
-          gameIFrame.style.height === 0.75 * screen.height + "px"
-        ) {
-          return;
-        }
-
-        console.log("Set game element size.");
-        gameIFrame.style.width = 0.75 * screen.width + "px";
-        gameIFrame.style.height = 0.75 * screen.height + "px";
-      }
-    }
-  };
-
   if (isDeepOne()) {
     if (document.location.href.toLocaleLowerCase().includes("dmm.com")) {
-      window.setInterval(setGameIFrameSize, 300);
       window.setTimeout(setGameIFrameFullscreen, 500);
     }
   }
