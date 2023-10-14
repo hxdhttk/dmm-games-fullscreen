@@ -28,7 +28,8 @@
 
   const setGameIFrameFullscreen = () => {
     const gameIFrame = document.getElementById("game-iframe");
-    if (gameIFrame) {
+    const gameMainDiv = document.getElementById("game-main");
+    if (gameIFrame && gameMainDiv) {
       console.log("Add fullscreen button.");
       const fullscreenButton = document.createElement("button");
       const buttonText = document.createTextNode("Fullscreen");
@@ -43,7 +44,7 @@
       fullscreenButton.style.left = "0px";
       fullscreenButton.style.zIndex = "1";
 
-      document.body.insertBefore(fullscreenButton, gameIFrame);
+      document.body.insertBefore(fullscreenButton, gameMainDiv);
     } else {
       window.setTimeout(setGameIFrameFullscreen, 500);
     }
