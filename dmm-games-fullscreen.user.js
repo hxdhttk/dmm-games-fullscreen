@@ -38,6 +38,9 @@
       const buttonText = document.createTextNode("Fullscreen");
       fullscreenButton.appendChild(buttonText);
       fullscreenButton.onclick = () => {
+        gameIFrame.style.width = screen.width + "px";
+        gameIFrame.style.height = screen.height + "px";
+
         console.log("Requesting fullscreen:", gameIFrame);
         void gameIFrame.requestFullscreen();
       };
