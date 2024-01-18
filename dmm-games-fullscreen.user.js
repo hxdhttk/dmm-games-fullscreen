@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.8
+// @version      0.9
 // @description  Enable fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -50,8 +50,8 @@
     const gameIFrame = document.getElementById("game-iframe");
     const gameMainDiv = document.getElementById("game-main");
     if (gameIFrame && gameMainDiv) {
-      gameIFrame.style.width = screen.width + "px";
-      gameIFrame.style.height = screen.height + "px";
+      gameIFrame.style.width = 1280 + "px";
+      gameIFrame.style.height = 720 + "px";
 
       console.log("Add fullscreen button.");
       const fullscreenButton = document.createElement("button");
