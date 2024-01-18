@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.6
+// @version      0.7
 // @description  Enable fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -18,6 +18,26 @@
     document.location.href.toLocaleLowerCase().includes("mist");
   const isDeepOne = () =>
     document.location.href.toLocaleLowerCase().includes("deepone");
+
+  const isFullscreen = () => !window.screenTop && !window.screenY;
+
+  const addFullscreenButton = (gameElement) => {
+    console.log("Add fullscreen button.");
+    const fullscreenButton = document.createElement("button");
+    const buttonText = document.createTextNode("Fullscreen");
+    fullscreenButton.appendChild(buttonText);
+    fullscreenButton.onclick = () => {
+      console.log("Requesting fullscreen:", gameElement);
+      void gameElement.requestFullscreen();
+    };
+    fullscreenButton.style.fontSize = "12px";
+    fullscreenButton.style.position = "fixed";
+    fullscreenButton.style.top = "0px";
+    fullscreenButton.style.left = "0px";
+    fullscreenButton.style.zIndex = "1";
+
+    document.body.insertBefore(fullscreenButton, gameElement);
+  };
 
   const gameFrame = document.getElementById("game_frame");
   const gameCanvas = document.getElementById("GameDiv");
@@ -56,6 +76,15 @@
     }
   };
 
+  const restoreGameIFrameSizeWhenNotFullscreen = () => {
+    if (!isFullscreen()) {
+      gameIFrame.style.width = 1280 + "px";
+      gameIFrame.style.height = 720 + "px";
+    }
+  };
+
+  window.setInterval(restoreGameIFrameSizeWhenNotFullscreen, 150);
+
   if (isDeepOne()) {
     if (document.location.href.toLocaleLowerCase().includes("dmm.com")) {
       window.setTimeout(setGameIFrameFullscreen, 500);
@@ -63,29 +92,9 @@
   }
 
   if (gameFrame) {
-    console.log("Add fullscreen trigger.");
-    window.addEventListener("keydown", (ev) => {
-      if (ev.key === "v") {
-        console.log("Requesting fullscreen:", gameFrame);
-        void gameFrame.requestFullscreen();
-      }
-    });
+    addFullscreenButton(gameFrame);
   } else if (gameCanvas && isMist()) {
-    console.log("Add fullscreen button.");
-    const fullscreenButton = document.createElement("button");
-    const buttonText = document.createTextNode("Fullscreen");
-    fullscreenButton.appendChild(buttonText);
-    fullscreenButton.onclick = () => {
-      console.log("Requesting fullscreen:", gameCanvas);
-      void gameCanvas.requestFullscreen();
-    };
-    fullscreenButton.style.fontSize = "12px";
-    fullscreenButton.style.position = "fixed";
-    fullscreenButton.style.top = "0px";
-    fullscreenButton.style.left = "0px";
-    fullscreenButton.style.zIndex = "1";
-
-    document.body.insertBefore(fullscreenButton, gameCanvas);
+    addFullscreenButton(gameCanvas);
   }
 
   const setCanvasSize = () => {
@@ -133,5 +142,5 @@
     }
   };
 
-  window.setInterval(setCanvasSize, 500);
+  window.setInterval(setCanvasSize, 150);
 })();
