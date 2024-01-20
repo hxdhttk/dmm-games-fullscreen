@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.10
+// @version      0.11
 // @description  Enable fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -18,8 +18,6 @@
     document.location.href.toLocaleLowerCase().includes("mist");
   const isDeepOne = () =>
     document.location.href.toLocaleLowerCase().includes("deepone");
-
-  const isFullscreen = () => !window.screenTop && !window.screenY;
 
   const addFullscreenButton = (gameElement, buttonBg) => {
     console.log("Add fullscreen button.");
@@ -50,8 +48,8 @@
     const gameIFrame = document.getElementById("game-iframe");
     const gameMainDiv = document.getElementById("game-main");
     if (gameIFrame && gameMainDiv) {
-      gameIFrame.style.width = 1280 + "px";
-      gameIFrame.style.height = 720 + "px";
+      gameIFrame.style.width = screen.width + "px";
+      gameIFrame.style.height = screen.height + "px";
 
       console.log("Add fullscreen button.");
       const fullscreenButton = document.createElement("button");
@@ -75,20 +73,6 @@
       window.setTimeout(setGameIFrameFullscreen, 500);
     }
   };
-
-  const restoreGameIFrameSizeWhenNotFullscreen = () => {
-    if (!isFullscreen()) {
-      const gameIFrame = document.getElementById("game-iframe");
-      const gameMainDiv = document.getElementById("game-main");
-
-      if (gameIFrame && gameMainDiv) {
-        gameIFrame.style.width = 1280 + "px";
-        gameIFrame.style.height = 720 + "px";
-      }
-    }
-  };
-
-  window.setInterval(restoreGameIFrameSizeWhenNotFullscreen, 150);
 
   if (isDeepOne()) {
     if (document.location.href.toLocaleLowerCase().includes("dmm.com")) {
