@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.11
+// @version      0.12
 // @description  Enable fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
 // @match        *://*.dmm.com/*
 // @match        *://*.mist-train-girls.com/*
 // @match        *://*.deepone-online.com/*
+// @match        *://*.sweet-home-maid.com/*
 // @grant        none
 // ==/UserScript==
 
@@ -18,6 +19,8 @@
     document.location.href.toLocaleLowerCase().includes("mist");
   const isDeepOne = () =>
     document.location.href.toLocaleLowerCase().includes("deepone");
+  const isSHM = () =>
+    document.location.href.toLocaleLowerCase.includes("sweethomemaid");
 
   const addFullscreenButton = (gameElement, buttonBg) => {
     console.log("Add fullscreen button.");
@@ -74,7 +77,7 @@
     }
   };
 
-  if (isDeepOne()) {
+  if (isDeepOne() || isSHM()) {
     if (document.location.href.toLocaleLowerCase().includes("dmm.com")) {
       window.setTimeout(setGameIFrameFullscreen, 500);
     }
