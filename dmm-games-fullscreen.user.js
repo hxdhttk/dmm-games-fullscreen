@@ -89,7 +89,7 @@
     if (cocosFrame) {
       addFullscreenButton(cocosFrame, cocosFrame);
     }
-  } else if (gameFrame) {
+  } else if (gameFrame && !isSHM()) {
     const gameAreaDiv = document.getElementById("area-game");
     if (gameAreaDiv) {
       addFullscreenButton(gameFrame, gameAreaDiv);
