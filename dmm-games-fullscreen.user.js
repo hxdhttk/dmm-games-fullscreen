@@ -92,6 +92,10 @@
     }
   };
 
+  if (isSHM()) {
+    window.setTimeout(setCocosFrameFullscreen(), 500);
+  }
+
   if (gameFrame && !isSHM()) {
     const gameAreaDiv = document.getElementById("area-game");
     if (gameAreaDiv) {
