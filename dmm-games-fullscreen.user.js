@@ -41,7 +41,6 @@
   };
 
   const gameFrame = document.getElementById("game_frame");
-  const cocosFrame = document.getElementById("cocos_frame");
   const gameCanvas = document.getElementById("GameDiv");
 
   if (gameFrame && (isMist() || isDeepOne())) {
@@ -84,9 +83,16 @@
     }
   }
 
-  if (cocosFrame) {
-    addFullscreenButton(cocosFrame, cocosFrame);
-  } else if (gameFrame && !isSHM()) {
+  const setCocosFrameFullscreen = () => {
+    const cocosFrame = document.getElementById("cocos_frame");
+    if (cocosFrame) {
+      addFullscreenButton(cocosFrame, cocosFrame);
+    } else {
+      window.setTimeout(setCocosFrameFullscreen, 500);
+    }
+  };
+
+  if (gameFrame && !isSHM()) {
     const gameAreaDiv = document.getElementById("area-game");
     if (gameAreaDiv) {
       addFullscreenButton(gameFrame, gameAreaDiv);
