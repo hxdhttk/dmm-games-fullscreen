@@ -20,7 +20,7 @@
   const isDeepOne = () =>
     document.location.href.toLocaleLowerCase().includes("deepone");
   const isSHM = () =>
-    document.location.href.toLocaleLowerCase.includes("sweet-home-maid");
+    document.location.href.toLocaleLowerCase().includes("maid");
 
   const addFullscreenButton = (gameElement, buttonBg) => {
     console.log("Add fullscreen button.");
@@ -43,7 +43,7 @@
   const gameFrame = document.getElementById("game_frame");
   const gameCanvas = document.getElementById("GameDiv");
 
-  if (gameFrame && (isMist() || isDeepOne())) {
+  if (gameFrame && (isMist() || isDeepOne() || isSHM())) {
     return;
   }
 
