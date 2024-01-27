@@ -43,7 +43,7 @@
   const gameFrame = document.getElementById("game_frame");
   const gameCanvas = document.getElementById("GameDiv");
 
-  if (gameFrame && (isMist() || isDeepOne() || isSHM())) {
+  if (gameFrame && (isMist() || isDeepOne())) {
     return;
   }
 
@@ -77,7 +77,7 @@
     }
   };
 
-  if (isDeepOne() || isSHM()) {
+  if (isDeepOne()) {
     if (document.location.href.toLocaleLowerCase().includes("dmm.com")) {
       window.setTimeout(setGameIFrameFullscreen, 500);
     }
