@@ -20,7 +20,7 @@
   const isDeepOne = () =>
     document.location.href.toLocaleLowerCase().includes("deepone");
   const isSHM = () =>
-    document.location.href.toLocaleLowerCase.includes("sweethomemaid");
+    document.location.href.toLocaleLowerCase.includes("sweet-home-maid");
 
   const addFullscreenButton = (gameElement, buttonBg) => {
     console.log("Add fullscreen button.");
