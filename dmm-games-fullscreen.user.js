@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.12
+// @version      0.13
 // @description  Enable fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -150,5 +150,5 @@
     }
   };
 
-  window.setInterval(setCanvasSize, 150);
+  window.setInterval(setCanvasSize, 15);
 })();
