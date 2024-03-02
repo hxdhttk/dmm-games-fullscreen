@@ -143,12 +143,24 @@
           e.style.width = windowWidth;
           e.style.height = windowHeight;
         });
-
-        gameCanvas.width = window.devicePixelRatio * screen.width;
-        gameCanvas.height = window.devicePixelRatio * screen.height;
       }
     }
   };
 
+  const setGameCanvasClientSize = () => {
+    if (!isDeepOne()) {
+      return;
+    }
+
+    const gameDiv = document.getElementById("GameDiv");
+    const gameContainer = document.getElementById("Cocos2dGameContainer");
+    const gameCanvas = document.getElementById("GameCanvas");
+    if (gameDiv && gameContainer && gameCanvas) {
+      gameCanvas.width = window.devicePixelRatio * screen.width;
+      gameCanvas.height = window.devicePixelRatio * screen.height;
+    }
+  };
+
   window.setInterval(setCanvasSize, 150);
+  window.setInterval(setGameCanvasClientSize, 50);
 })();
