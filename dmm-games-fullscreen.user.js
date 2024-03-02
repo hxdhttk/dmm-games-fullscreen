@@ -102,7 +102,7 @@
     addFullscreenButton(gameCanvas, gameCanvas);
   }
 
-  const setCanvasSize = (isSecondCall) => {
+  const setCanvasSize = () => {
     const pcBottom = document.getElementById("pcbottom");
     if (pcBottom) {
       console.log("Hide bottom content.");
@@ -136,10 +136,6 @@
         gameDiv.style.width === windowWidth &&
         gameDiv.style.height === windowHeight
       ) {
-        if (!isSecondCall) {
-          window.setTimeout(() => setCanvasSize(true), 15);
-        }
-
         return;
       } else {
         console.log("Set game element size.");
@@ -148,9 +144,8 @@
           e.style.height = windowHeight;
         });
 
-        if (!isSecondCall) {
-          window.setTimeout(() => setCanvasSize(true), 15);
-        }
+        gameCanvas.width = window.devicePixelRatio * screen.width;
+        gameCanvas.height = window.devicePixelRatio * screen.height;
       }
     }
   };
