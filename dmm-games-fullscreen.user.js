@@ -59,9 +59,6 @@
       const buttonText = document.createTextNode("Fullscreen");
       fullscreenButton.appendChild(buttonText);
       fullscreenButton.onclick = () => {
-        gameIFrame.style.width = screen.width + "px";
-        gameIFrame.style.height = screen.height + "px";
-
         console.log("Requesting fullscreen:", gameIFrame);
         void gameIFrame.requestFullscreen();
       };
@@ -105,7 +102,7 @@
     addFullscreenButton(gameCanvas, gameCanvas);
   }
 
-  const setCanvasSize = () => {
+  const setCanvasSize = (isSecondCall) => {
     const pcBottom = document.getElementById("pcbottom");
     if (pcBottom) {
       console.log("Hide bottom content.");
@@ -139,6 +136,10 @@
         gameDiv.style.width === windowWidth &&
         gameDiv.style.height === windowHeight
       ) {
+        if (!isSecondCall) {
+          window.setTimeout(() => setCanvasSize(true), 15);
+        }
+
         return;
       } else {
         console.log("Set game element size.");
@@ -146,9 +147,13 @@
           e.style.width = windowWidth;
           e.style.height = windowHeight;
         });
+
+        if (!isSecondCall) {
+          window.setTimeout(() => setCanvasSize(true), 15);
+        }
       }
     }
   };
 
-  window.setInterval(setCanvasSize, 15);
+  window.setInterval(setCanvasSize, 150);
 })();
