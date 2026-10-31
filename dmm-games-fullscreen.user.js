@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.14
+// @version      0.15
 // @description  Hover to enter fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -33,12 +33,13 @@
   let savedFullscreenStyle = null;
   let fullscreenTarget = null;
   let busy = false;
+  let fullscreenRatio = 16 / 9;
 
   // Keep the original outer/inner frame routing; discovery also handles late loads.
   function findTarget() {
     if (byId("game_frame") && (isMist || isDeepOne)) return null;
     if (isMaid) return byId("cocos_frame");
-    if (isDeepOne && isDmm) return byId("game-iframe");
+    if (isDeepOne) return byId("GameDiv") || byId("game-iframe");
     if (isMist) return byId("GameDiv");
     return byId("game_frame") || byId("GameDiv") || byId("unity-canvas");
   }
@@ -46,7 +47,7 @@
   function mountControl() {
     host = document.createElement("div");
     host.id = CONTROL_ID;
-    host.style.cssText = "position:fixed!important;top:0!important;left:0!important;width:148px!important;height:60px!important;z-index:2147483647!important;display:block!important;";
+    host.style.cssText = "position:relative!important;display:block!important;clear:both!important;width:100%!important;min-width:148px!important;height:60px!important;box-sizing:border-box!important;z-index:2147483647!important;";
     const shadow = host.attachShadow({ mode: "open" });
     shadow.innerHTML = `
       <style>
@@ -94,6 +95,8 @@
           if (typeof element.requestFullscreen !== "function" || document.fullscreenEnabled === false) {
             throw new Error("当前页面不允许全屏，请检查浏览器或嵌入页面权限。");
           }
+          const bounds = element.getBoundingClientRect();
+          fullscreenRatio = isMist || isDeepOne ? 16 / 9 : (bounds.width / bounds.height || 16 / 9);
           await element.requestFullscreen();
         }
       } catch (error) {
@@ -105,13 +108,15 @@
         if (!button.matches(":focus-visible")) button.blur();
       }
     });
-    document.body.appendChild(host);
+    target.parentNode.insertBefore(host, target);
   }
 
-  function setSize(element, width, height) {
-    if (!element) return;
-    if (element.style.width !== `${width}px`) element.style.width = `${width}px`;
-    if (element.style.height !== `${height}px`) element.style.height = `${height}px`;
+  function fitFullscreen() {
+    if (!fullscreenTarget) return;
+    const width = Math.min(window.innerWidth, window.innerHeight * fullscreenRatio);
+    const height = width / fullscreenRatio;
+    fullscreenTarget.style.setProperty("width", `${width}px`, "important");
+    fullscreenTarget.style.setProperty("height", `${height}px`, "important");
   }
 
   function update() {
@@ -119,28 +124,14 @@
     if (!document.body) return;
     target = findTarget();
     if (target && !host) mountControl();
-    if (host) host.style.setProperty("display", target && !document.fullscreenElement ? "block" : "none", "important");
-
-    // Only adapt pages containing an actual game, not every matching DMM page.
-    if (!target && !(isDeepOne && byId("GameCanvas"))) return;
-    const bottom = byId("pcbottom");
-    if (bottom && bottom.style.display !== "none") bottom.style.display = "none";
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    setSize(byId("unity-canvas"), width, height);
-    if (isMist) return;
-    const div = byId("GameDiv");
-    const container = byId("Cocos2dGameContainer");
-    const canvas = byId("GameCanvas");
-    if (div && container && canvas) {
-      [div, container, canvas].forEach((element) => setSize(element, width, height));
-      if (isDeepOne) {
-        const pixelWidth = Math.max(1, Math.round(width * (window.devicePixelRatio || 1)));
-        const pixelHeight = Math.max(1, Math.round(height * (window.devicePixelRatio || 1)));
-        if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
-        if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
-      }
+    // Put the hover strip in document flow immediately before the game, not over it.
+    if (host && target && (host.parentNode !== target.parentNode || host.nextSibling !== target)) {
+      target.parentNode.insertBefore(host, target);
     }
+    if (host) host.style.setProperty("display", target && !document.fullscreenElement ? "block" : "none", "important");
+    fitFullscreen();
+    // Canvas backing stores and engine-owned CSS must stay under engine control.
+    // Resizing them independently can desynchronize rendering and input coordinates.
   }
 
   function schedule() {
@@ -158,15 +149,23 @@
     }
     if (target && document.fullscreenElement === target && !fullscreenTarget) {
       fullscreenTarget = target;
-      savedFullscreenStyle = ["width", "height", "border"].map((name) => [name, target.style.getPropertyValue(name), target.style.getPropertyPriority(name)]);
-      target.style.setProperty("width", "100vw", "important");
-      target.style.setProperty("height", "100vh", "important");
+      savedFullscreenStyle = ["width", "height", "border", "position", "inset", "margin", "max-width", "max-height", "transform"].map((name) => [name, target.style.getPropertyValue(name), target.style.getPropertyPriority(name)]);
+      target.style.setProperty("position", "fixed", "important");
+      target.style.setProperty("inset", "0", "important");
+      target.style.setProperty("margin", "auto", "important");
+      target.style.setProperty("max-width", "none", "important");
+      target.style.setProperty("max-height", "none", "important");
+      target.style.setProperty("transform", "none", "important");
+      fitFullscreen();
       target.style.setProperty("border", "0", "important");
     }
     schedule();
   }
 
   // Observe node discovery/replacement only; our own style writes do not retrigger it.
+  const backdrop = document.createElement("style");
+  backdrop.textContent = "#GameDiv::backdrop, #game_frame::backdrop, #game-iframe::backdrop, #cocos_frame::backdrop, #unity-canvas::backdrop { background: #000; }";
+  document.documentElement.appendChild(backdrop);
   const observer = new MutationObserver(schedule);
   observer.observe(document.documentElement, { childList: true, subtree: true });
   window.addEventListener("resize", schedule);
