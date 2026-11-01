@@ -12,7 +12,10 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
   try {
     server = http.createServer((req, res) => {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      if (req.url === '/child') res.end('<body style="margin:0;background:#567"><canvas width="1280" height="720"></canvas>');
+      if (req.url === '/child') res.end(`<body style="margin:20px;padding:15px;background:#567"><div id="GameDiv" style="width:640px;height:360px;margin:25px auto;border:4px solid red"><div id="Cocos2dGameContainer" style="width:640px;height:360px"><canvas id="GameCanvas" width="640" height="360" style="width:640px;height:360px"></canvas></div></div><div id="inner-banner">INNER BANNER</div><script>
+        const canvas=document.getElementById('GameCanvas');
+        canvas.addEventListener('pointerdown',event=>{const r=canvas.getBoundingClientRect();window.lastHit=[(event.clientX-r.left)*canvas.width/r.width,(event.clientY-r.top)*canvas.height/r.height]});
+        </script><script>${script}</script>`);
       else res.end(`<body style="margin:0"><iframe id="game-iframe" src="/child" style="width:1280px;height:720px"></iframe><div id="banner">BANNER</div><script>${script}</script>`);
     });
     await new Promise((r) => server.listen(0, '127.0.0.1', r));
@@ -42,15 +45,23 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
     assert.equal(trigger.topLayer, true); assert.equal(trigger.hit, true);
     assert.equal(trigger.width, 19); assert.equal(trigger.height, 19);
     assert.ok(trigger.x>=0 && trigger.x+19<=1280 && trigger.y>=0 && trigger.y+19<=800);
-    const before = await evaluate('({ top:document.getElementById("game-iframe").getBoundingClientRect().top, height:document.getElementById("game-iframe").getBoundingClientRect().height })');
+    const before = await evaluate(`(() => {const f=document.getElementById('game-iframe'),c=f.contentDocument.getElementById('GameCanvas').getBoundingClientRect();return {top:f.getBoundingClientRect().top,height:f.getBoundingClientRect().height,canvas:[c.x,c.y,c.width,c.height]};})()`);
     await evaluate('document.getElementById("dmm-fullscreen-control").shadowRoot.querySelector("button").click()', true);
     await delay(500);
     const full = await evaluate(`(() => { const r=document.getElementById('game-iframe').getBoundingClientRect(); return {full:!!document.fullscreenElement,width:r.width,height:r.height,top:r.top,viewport:[innerWidth,innerHeight],banner:getComputedStyle(document.getElementById('banner')).display,child:[document.getElementById('game-iframe').contentWindow.innerWidth,document.getElementById('game-iframe').contentWindow.innerHeight]}; })()`);
+    const inner = await evaluate(`(() => {const f=document.getElementById('game-iframe'),d=f.contentDocument,c=d.getElementById('GameCanvas').getBoundingClientRect();return {canvas:[c.x,c.y,c.width,c.height],banner:getComputedStyle(d.getElementById('inner-banner')).display,backing:[d.getElementById('GameCanvas').width,d.getElementById('GameCanvas').height],scroll:[d.documentElement.scrollWidth,d.documentElement.scrollHeight]};})()`);
+    assert.deepEqual(inner.canvas,[0,0,1280,720]); assert.equal(inner.banner,'none'); assert.deepEqual(inner.backing,[640,360]);
+    // A real pointer event, routed through the resized iframe and canvas.
+    await send('Input.dispatchMouseEvent',{type:'mousePressed',x:320,y:220,button:'left',clickCount:1});
+    await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:320,y:220,button:'left',clickCount:1});
+    const hit=await evaluate(`document.getElementById('game-iframe').contentWindow.lastHit`);
+    assert.deepEqual(hit,[160,90]);
     assert.equal(full.full, true); assert.ok(Math.abs(full.width / full.height - 16/9) < 0.001); assert.equal(full.banner, 'none'); assert.ok(Math.abs(full.child[0]/full.child[1]-16/9)<0.001);
     await evaluate('document.exitFullscreen()'); await delay(200);
-    const after = await evaluate('({top:document.getElementById("game-iframe").getBoundingClientRect().top,height:document.getElementById("game-iframe").getBoundingClientRect().height,banner:getComputedStyle(document.getElementById("banner")).display})');
+    const after = await evaluate(`(() => {const f=document.getElementById('game-iframe'),d=f.contentDocument,c=d.getElementById('GameCanvas').getBoundingClientRect();return {top:f.getBoundingClientRect().top,height:f.getBoundingClientRect().height,banner:getComputedStyle(document.getElementById('banner')).display,innerBanner:getComputedStyle(d.getElementById('inner-banner')).display,canvas:[c.x,c.y,c.width,c.height]};})()`);
+    assert.deepEqual(before.canvas,after.canvas); assert.notEqual(after.innerBanner,'none');
     assert.equal(before.top, after.top); assert.equal(before.height, after.height); assert.notEqual(after.banner, 'none');
-    console.log(JSON.stringify({ trigger, before, fullscreen: full, after }));
+    console.log(JSON.stringify({ trigger, before, fullscreen: full, inner, hit, after }));
   } finally {
     socket?.close(); browser?.kill(); server?.close();
     await delay(500);

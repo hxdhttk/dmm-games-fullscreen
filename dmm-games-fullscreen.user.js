@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.17
+// @version      0.18
 // @description  Hover to enter fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -34,6 +34,10 @@
   let busy = false;
   const childOwners = new Set();
   const CLAIM = "dmm-fullscreen-owner-v1";
+  const LAYOUT = "dmm-fullscreen-layout-v1";
+  const READY = "dmm-fullscreen-ready-v1";
+  let remoteActive = false;
+  let contentSession = null;
 
   function delegateFullscreen() {
     for (const child of [byId("game_frame"), byId("game-iframe"), byId("cocos_frame")]) {
@@ -180,10 +184,87 @@
       session.hidden.push(sibling);
       set(sibling, "display", "none");
     }
+    sendLayout(element, true);
+  }
+
+  function sendLayout(element, active) {
+    if (element?.tagName === "IFRAME") element.contentWindow?.postMessage({ type: LAYOUT, active }, "*");
+  }
+
+  function contentTarget() {
+    return byId("GameDiv") || byId("GameCanvas") || byId("unity-canvas") || byId("game-iframe") || byId("cocos_frame") || byId("game_frame");
+  }
+
+  function restoreContent() {
+    if (!contentSession) return;
+    sendLayout(contentSession.element, false);
+    const { engine, engineSize, saved } = contentSession;
+    if (engine && engineSize) {
+      try { engine.setFrameSize(engineSize.width, engineSize.height); } catch (error) { console.warn("Restore game view:", error); }
+    }
+    for (const [element, name, value, priority] of saved) {
+      if (value) element.style.setProperty(name, value, priority);
+      else element.style.removeProperty(name);
+    }
+    contentSession = null;
+  }
+
+  function fitContent() {
+    if (!remoteActive) return;
+    const element = contentTarget();
+    if (!element) return; // The engine may not have loaded yet.
+    if (contentSession?.element !== element) restoreContent();
+    if (!contentSession) contentSession = { element, saved: [], tracked: new Map(), engine: null, engineSize: null, dimensions: "" };
+    const state = contentSession;
+    const set = (node, properties) => {
+      if (!node?.style) return;
+      let tracked = state.tracked.get(node);
+      if (!tracked) { tracked = new Set(); state.tracked.set(node, tracked); }
+      for (const [name, value] of Object.entries(properties)) {
+        if (!tracked.has(name)) { state.saved.push(...saveStyles(node, [name])); tracked.add(name); }
+        if (node.style.getPropertyValue(name) !== value || node.style.getPropertyPriority(name) !== "important") node.style.setProperty(name, value, "important");
+      }
+    };
+    const width = Math.min(window.innerWidth, window.innerHeight * 16 / 9);
+    const height = width * 9 / 16;
+    // Normalize the complete ancestor chain; resizing only the outer iframe leaves
+    // fixed-width game containers, margins and banners inside it unchanged.
+    for (let branch = element; branch.parentElement; branch = branch.parentElement) {
+      const parent = branch.parentElement;
+      for (const sibling of parent.children) {
+        if (sibling !== branch && sibling.id !== CONTROL_ID) set(sibling, { display: "none" });
+      }
+      set(parent, { position:"static", transform:"none", margin:"0", padding:"0", border:"0", width:"100%", height:"100%", "min-width":"0", "min-height":"0", "max-width":"none", "max-height":"none", overflow:"hidden", background:"#000" });
+    }
+    const frameProperties = { margin:"0", padding:"0", border:"0", "box-sizing":"border-box", "min-width":"0", "min-height":"0", "max-width":"none", "max-height":"none", transform:"none" };
+    set(element, { ...frameProperties, display:"block", position:"fixed", inset:"auto", left:`${(window.innerWidth - width) / 2}px`, top:`${(window.innerHeight - height) / 2}px`, width:`${width}px`, height:`${height}px`, overflow:"hidden" });
+    // Track before invoking the engine, since it also writes these CSS properties.
+    const canvas = byId("GameCanvas") || byId("unity-canvas");
+    if (canvas && element.contains(canvas) && canvas !== element) {
+      for (let node = canvas; node && node !== element; node = node.parentElement) {
+        set(node, { ...frameProperties, position:"absolute", inset:"0", left:"0", top:"0", width:"100%", height:"100%", display:"block" });
+      }
+    }
+    const view = window.cc?.view;
+    if (!state.engine && typeof view?.setFrameSize === "function" && typeof view?.getFrameSize === "function") {
+      const original = view.getFrameSize();
+      state.engineSize = { width: original.width, height: original.height };
+      state.engine = view;
+    }
+    const dimensions = `${width}x${height}`;
+    if (state.engine && state.dimensions !== dimensions) {
+      // Let Cocos update its own resolution policy and input scale together.
+      // Do not write canvas.width/height independently of the engine.
+      try { state.engine.setFrameSize(width, height); state.dimensions = dimensions; }
+      catch (error) { console.warn("Resize game view:", error); }
+    }
+    if (canvas === element) set(canvas, { "object-fit":"contain" });
+    sendLayout(element, true);
   }
 
   function restoreFullscreen() {
     if (!session) return;
+    sendLayout(session.element, false);
     if (session.active) {
       for (const [element, name, value, priority] of session.saved) {
         if (value) element.style.setProperty(name, value, priority);
@@ -201,11 +282,12 @@
     target = childOwners.size ? null : findTarget();
     if (target && !host) mountControl();
     if (host) {
-      host.style.setProperty("display", target && !document.fullscreenElement ? "block" : "none", "important");
+      host.style.setProperty("display", target && !remoteActive && !document.fullscreenElement ? "block" : "none", "important");
       if (target && !document.fullscreenElement) placeControl();
     }
     if (embedded) window.parent.postMessage({ type: CLAIM, owns: Boolean(target || childOwners.size) }, "*");
     fitFullscreen();
+    fitContent();
   }
 
   function schedule() {
@@ -220,6 +302,19 @@
     schedule();
   });
   window.addEventListener("message", (event) => {
+    if (embedded && event.source === window.parent && event.data?.type === LAYOUT && typeof event.data.active === "boolean") {
+      if (remoteActive !== event.data.active) {
+        remoteActive = event.data.active;
+        if (!remoteActive) restoreContent();
+        schedule();
+      }
+      return;
+    }
+    if (event.data?.type === READY) {
+      const element = session?.active ? session.element : (remoteActive ? contentTarget() : null);
+      if (element?.tagName === "IFRAME" && element.contentWindow === event.source) sendLayout(element, true);
+      return;
+    }
     if (embedded && event.source === window.parent && event.data?.type === `${CLAIM}-probe`) { schedule(); return; }
     if (event.data?.type !== CLAIM || typeof event.data.owns !== "boolean") return;
     const child = [...document.querySelectorAll("iframe")].find((node) => node.contentWindow === event.source);
@@ -242,5 +337,6 @@
     observer.observe(document.documentElement, { childList: true, subtree: true });
     schedule();
   });
+  if (embedded) window.parent.postMessage({ type: READY }, "*");
   schedule();
 })();

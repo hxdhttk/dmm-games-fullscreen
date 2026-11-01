@@ -9,6 +9,7 @@ function setup({ href = 'https://play.games.dmm.co.jp/game/MistTrainGirlsX', emb
   const element = (tagName = 'DIV', id = '') => {
     const listeners = {}, attributes = {}, priorities = {};
     return { tagName, id, children: [], listeners, isConnected: true,
+      contains(node) { return node === this || this.children.some((child) => child.contains(node)); },
       style: { setProperty(k, v, p = '') { this[k] = v; priorities[k] = p; }, getPropertyValue(k) { return this[k] || ''; }, getPropertyPriority(k) { return priorities[k] || ''; }, removeProperty(k) { delete this[k]; delete priorities[k]; } },
       getAttribute: (k) => attributes[k] || null, setAttribute(k, v) { attributes[k] = v; },
       getBoundingClientRect: () => ({ left: 20, top: 80, right: 1300, bottom: 800, width: 1280, height: 720 }),
@@ -95,4 +96,20 @@ test('embedded edge-to-edge game keeps trigger inside iframe viewport', () => {
   assert.equal(host.getAttribute('popover'), 'manual');
   app.window.scrollY = 1000; app.events.scroll(); app.flush();
   assert.equal(host.style.top, '4px');
+});
+
+test('parent fullscreen layout resizes Cocos through its view API and restores it on exit', () => {
+  const app = setup({href:'https://www.deepone-online.com/',embedded:true});
+  const root=app.add('GameDiv','DIV'); const canvas=app.add('GameCanvas','CANVAS',root);
+  const banner=app.add('banner','DIV'); root.style.setProperty('width','640px');
+  const calls=[];
+  app.window.cc={view:{getFrameSize:()=>({width:640,height:360}),setFrameSize:(w,h)=>calls.push([w,h])}};
+  app.events.message({source:{},data:{type:'dmm-fullscreen-layout-v1',active:true}});app.flush();
+  assert.equal(root.style.width,'640px'); assert.equal(calls.length,0);
+  app.events.message({source:app.window.parent,data:{type:'dmm-fullscreen-layout-v1',active:true}});app.flush();
+  assert.equal(root.style.width,'1280px');assert.equal(root.style.height,'720px');assert.equal(root.style.top,'40px');
+  assert.equal(banner.style.display,'none');assert.equal(canvas.style.width,'100%');assert.deepEqual(calls,[[1280,720]]);
+  app.events.resize();app.flush();assert.equal(calls.length,1);
+  app.events.message({source:app.window.parent,data:{type:'dmm-fullscreen-layout-v1',active:false}});app.flush();
+  assert.deepEqual(calls,[[1280,720],[640,360]]);assert.equal(root.style.width,'640px');assert.equal(canvas.style.width,undefined);assert.equal(banner.style.display,undefined);
 });
