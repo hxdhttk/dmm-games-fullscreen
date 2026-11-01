@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.20
+// @version      0.21
 // @description  Hover to enter fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -256,9 +256,67 @@
     refresh();
   }
 
+  function installMistDomInputMapping(state, canvas) {
+    if (!isMist || !canvas || state.domInputCleanup) return;
+    // Mist's TapEffect uses canvas.onclick and raw offsetX/Y instead of Cocos
+    // events. MouseHelper.record does the same in canvas.onmousemove (desktop).
+    // Wrap only those property handlers; other DOM and Cocos listeners must
+    // continue to receive the original event and its CSS-pixel offsets.
+    const handlers = new Map();
+    const wrapHandler = (type) => {
+      const property = `on${type}`;
+      const original = canvas[property];
+      if (typeof original !== "function" || original === handlers.get(property)?.wrapper) return;
+      const wrapper = function (event) {
+        if (!remoteActive || contentSession !== state) return original.call(this, event);
+        const rect = canvas.getBoundingClientRect();
+        const view = window.cc?.view;
+        const design = view?.getDesignResolutionSize?.() || state.domDesignSize;
+        if (!(rect.width > 0 && rect.height > 0 && design?.width > 0 && design?.height > 0)) return original.call(this, event);
+        let x = (event.clientX - rect.left) * design.width / rect.width;
+        let y = (event.clientY - rect.top) * design.height / rect.height;
+        const viewport = view?.getViewportRect?.();
+        const scaleX = view?.getScaleX?.();
+        const scaleY = view?.getScaleY?.();
+        if (viewport && scaleX > 0 && scaleY > 0 && canvas.width > 0 && canvas.height > 0) {
+          x = ((event.clientX - rect.left) * canvas.width / rect.width - viewport.x) / scaleX;
+          y = design.height - ((rect.top + rect.height - event.clientY) * canvas.height / rect.height - viewport.y) / scaleY;
+        }
+        const mapped = new Proxy(event, {
+          get(target, name) {
+            if (name === "offsetX") return x;
+            if (name === "offsetY") return y;
+            // DOM getters and methods require the real native event as receiver.
+            const value = Reflect.get(target, name, target);
+            return typeof value === "function" ? value.bind(target) : value;
+          },
+        });
+        return original.call(this, mapped);
+      };
+      handlers.set(property, { original, wrapper });
+      canvas[property] = wrapper;
+    };
+    // Capture runs before the canvas's property handler. Recheck on each event
+    // so late game startup or scene changes can replace onclick/onmousemove.
+    const click = () => wrapHandler("click");
+    const move = () => wrapHandler("mousemove");
+    canvas.addEventListener("click", click, true);
+    canvas.addEventListener("mousemove", move, true);
+    click();
+    move();
+    state.domInputCleanup = () => {
+      canvas.removeEventListener("click", click, true);
+      canvas.removeEventListener("mousemove", move, true);
+      for (const [property, { original, wrapper }] of handlers) {
+        if (canvas[property] === wrapper) canvas[property] = original;
+      }
+    };
+  }
+
   function restoreContent() {
     if (!contentSession) return;
     sendLayout(contentSession.element, false);
+    contentSession.domInputCleanup?.();
     contentSession.inputCleanup?.();
     const { engine, engineSize, saved } = contentSession;
     if (engine && engineSize) {
@@ -279,6 +337,14 @@
     if (contentSession?.element !== element) restoreContent();
     if (!contentSession) contentSession = { element, saved: [], tracked: new Map(), engine: null, engineSize: null, dimensions: "" };
     const state = contentSession;
+    const canvas = byId("GameCanvas") || byId("unity-canvas");
+    if (isMist && canvas && !state.domDesignSize) {
+      const design = window.cc?.view?.getDesignResolutionSize?.();
+      state.domDesignSize = {
+        width: design?.width || canvas.clientWidth || parseFloat(canvas.style.width),
+        height: design?.height || canvas.clientHeight || parseFloat(canvas.style.height),
+      };
+    }
     const set = (node, properties) => {
       if (!node?.style) return;
       let tracked = state.tracked.get(node);
@@ -302,7 +368,6 @@
     const frameProperties = { margin:"0", padding:"0", border:"0", "box-sizing":"border-box", "min-width":"0", "min-height":"0", "max-width":"none", "max-height":"none", transform:"none" };
     set(element, { ...frameProperties, display:"block", position:"fixed", inset:"auto", left:`${(window.innerWidth - width) / 2}px`, top:`${(window.innerHeight - height) / 2}px`, width:`${width}px`, height:`${height}px`, overflow:"hidden" });
     // Track before invoking the engine, since it also writes these CSS properties.
-    const canvas = byId("GameCanvas") || byId("unity-canvas");
     if (canvas && element.contains(canvas) && canvas !== element) {
       for (let node = canvas; node && node !== element; node = node.parentElement) {
         set(node, { ...frameProperties, position:"absolute", inset:"0", left:"0", top:"0", width:"100%", height:"100%", display:"block" });
@@ -323,6 +388,7 @@
     }
     if (canvas === element) set(canvas, { "object-fit":"contain" });
     installMistInputMapping(state, canvas);
+    installMistDomInputMapping(state, canvas);
     sendLayout(element, true);
   }
 

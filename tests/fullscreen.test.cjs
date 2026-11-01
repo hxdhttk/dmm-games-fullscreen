@@ -13,7 +13,7 @@ function setup({ href = 'https://play.games.dmm.co.jp/game/MistTrainGirlsX', emb
       style: { setProperty(k, v, p = '') { this[k] = v; priorities[k] = p; }, getPropertyValue(k) { return this[k] || ''; }, getPropertyPriority(k) { return priorities[k] || ''; }, removeProperty(k) { delete this[k]; delete priorities[k]; } },
       getAttribute: (k) => attributes[k] || null, setAttribute(k, v) { attributes[k] = v; },
       getBoundingClientRect: () => ({ left: 20, top: 80, right: 1300, bottom: 800, width: 1280, height: 720 }),
-      addEventListener: (name, cb) => { listeners[name] = cb; }, matches: () => false, blur() {},
+      addEventListener: (name, cb) => { listeners[name] = cb; }, removeEventListener: (name) => { delete listeners[name]; }, matches: () => false, blur() {},
       appendChild(node) { this.children.push(node); node.parentElement = this; nodes.set(node.id, node); if (node.id === 'dmm-fullscreen-control') mounts++; },
       attachShadow() { const button = element('BUTTON'), status = element(); return this.shadow = { innerHTML: '', querySelector: (q) => q === 'button' ? button : status }; }
     };
@@ -173,4 +173,29 @@ test('Mist Cocos mouse/touch mapping matches rendering at multiple points, DPI v
     message(false);
     assert.equal(view._convertMouseToLocationInView,originalMouse);assert.equal(view.convertToLocationInView,originalTouch);
   }
+});
+
+test('Mist DOM TapEffect and MouseHelper offsets map CSS pixels to game units without changing other events', () => {
+  const app=setup({href:'https://assets4.mist-train-girls.com/production-client-web/307/index.html',embedded:true});
+  const root=app.add('GameDiv','DIV'),canvas=app.add('GameCanvas','CANVAS',root);
+  canvas.width=2130;canvas.height=1200;
+  canvas.getBoundingClientRect=()=>({left:20,top:30,width:2560,height:1440});
+  app.window.cc={view:{getDesignResolutionSize:()=>({width:1136,height:640}),getViewportRect:()=>({x:0,y:0}),getScaleX:()=>2130/1136,getScaleY:()=>1200/640}};
+  let ripple,mouse;const tap=function(e){assert.equal(this,canvas);ripple=[e.offsetX-568,320-e.offsetY];e.preventDefault();return false;};
+  const move=e=>{mouse=[e.offsetX-568,320-e.offsetY];};
+  canvas.onclick=tap;canvas.onmousemove=move;
+  const message=active=>{app.events.message({source:app.window.parent,data:{type:'dmm-fullscreen-layout-v1',active}});app.flush();};
+  message(true);
+  for(const [fx,fy] of [[0,0],[0.25,0.25],[0.5,0.5],[0.9,0.9],[1,1]]){
+    const event={clientX:20+fx*2560,clientY:30+fy*1440,offsetX:fx*2560,offsetY:fy*1440,preventDefault(){assert.equal(this,event);}};
+    canvas.listeners.click();assert.equal(canvas.onclick(event),false);
+    assert.ok(Math.abs(ripple[0]-(fx*1136-568))<1e-8);assert.ok(Math.abs(ripple[1]-(320-fy*640))<1e-8);
+    assert.equal(event.offsetX,fx*2560);assert.equal(event.offsetY,fy*1440);
+    canvas.listeners.mousemove();canvas.onmousemove(event);assert.deepEqual(mouse,ripple);
+  }
+  // A scene can replace onclick after the fullscreen session has started.
+  const replacement=e=>{ripple=[e.offsetX,e.offsetY];};canvas.onclick=replacement;
+  canvas.listeners.click();canvas.onclick({clientX:1300,clientY:750,offsetX:1280,offsetY:720});
+  assert.deepEqual(ripple,[568,320]);
+  message(false);assert.equal(canvas.onclick,replacement);assert.equal(canvas.onmousemove,move);
 });
