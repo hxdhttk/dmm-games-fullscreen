@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.18
+// @version      0.19
 // @description  Hover to enter fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -40,7 +40,7 @@
   let contentSession = null;
 
   function delegateFullscreen() {
-    for (const child of [byId("game_frame"), byId("game-iframe"), byId("cocos_frame")]) {
+    for (const child of [byId("game_frame"), byId("game-iframe"), byId("cocos_frame"), byId("frm1")]) {
       if (!child || child.tagName !== "IFRAME") continue;
       let changed = false;
       if (!child.allowFullscreen) { child.allowFullscreen = true; changed = true; }
@@ -65,6 +65,7 @@
     }
     if (byId("cocos_frame")) return byId("cocos_frame");
     if (embedded) return null;
+    if (isMist && byId("frm1")) return byId("frm1");
     // Standalone game pages can fullscreen their actual canvas, not GameDiv
     // (which can include engine offsets and other page content).
     return byId("GameCanvas") || byId("unity-canvas") || (isMist ? byId("GameDiv") : null);
@@ -192,7 +193,9 @@
   }
 
   function contentTarget() {
-    return byId("GameDiv") || byId("GameCanvas") || byId("unity-canvas") || byId("game-iframe") || byId("cocos_frame") || byId("game_frame");
+    // Mist has an intermediate document containing iframe#frm1. Relay through
+    // it without creating another fullscreen button in that document.
+    return byId("GameDiv") || byId("GameCanvas") || byId("unity-canvas") || byId("frm1") || byId("game-iframe") || byId("cocos_frame") || byId("game_frame");
   }
 
   function restoreContent() {

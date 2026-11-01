@@ -113,3 +113,20 @@ test('parent fullscreen layout resizes Cocos through its view API and restores i
   app.events.message({source:app.window.parent,data:{type:'dmm-fullscreen-layout-v1',active:false}});app.flush();
   assert.deepEqual(calls,[[1280,720],[640,360]]);assert.equal(root.style.width,'640px');assert.equal(canvas.style.width,undefined);assert.equal(banner.style.display,undefined);
 });
+
+test('Mist intermediate frm1 relays layout and late readiness without a second button', () => {
+  const app=setup({href:'https://www.dmm.co.jp/game/MistTrainGirlsX',embedded:true});
+  const child=app.add('frm1');const messages=[];
+  child.contentWindow={postMessage:(data)=>messages.push(data)};
+  child.setAttribute('src','https://assets4.mist-train-girls.com/production-client-web/307/index.html?platform=dmm');
+  app.flush();assert.equal(app.mounts(),0);assert.equal(child.allowFullscreen,true);
+  app.events.message({source:app.window.parent,data:{type:'dmm-fullscreen-layout-v1',active:true}});app.flush();
+  assert.equal(child.style.width,'1280px');assert.equal(child.style.height,'720px');
+  assert.ok(messages.some(m=>m.type==='dmm-fullscreen-layout-v1'&&m.active));
+  messages.length=0;
+  app.events.message({source:child.contentWindow,data:{type:'dmm-fullscreen-ready-v1'}});
+  assert.equal(messages.length,1);assert.equal(messages[0].type,'dmm-fullscreen-layout-v1');assert.equal(messages[0].active,true);
+  app.events.message({source:app.window.parent,data:{type:'dmm-fullscreen-layout-v1',active:false}});app.flush();
+  assert.equal(child.style.width,undefined);
+  assert.ok(messages.some(m=>m.type==='dmm-fullscreen-layout-v1'&&!m.active));
+});

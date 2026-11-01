@@ -12,7 +12,14 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
   try {
     server = http.createServer((req, res) => {
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      if (req.url === '/child') res.end(`<body style="margin:20px;padding:15px;background:#567"><div id="GameDiv" style="width:640px;height:360px;margin:25px auto;border:4px solid red"><div id="Cocos2dGameContainer" style="width:640px;height:360px"><canvas id="GameCanvas" width="640" height="360" style="width:640px;height:360px"></canvas></div></div><div id="inner-banner">INNER BANNER</div><script>
+      if (req.url === '/mist-client') res.end(`<body style="margin:0"><div id="GameDiv" style="width:1136px;height:640px"><div id="Cocos2dGameContainer" style="transform:rotate(0deg);width:1136px;height:640px;margin:0;padding:0"><canvas id="GameCanvas" width="2130" height="1200" style="width:1136px;height:640px"></canvas></div></div><script>
+        const canvas=document.getElementById('GameCanvas');
+        canvas.addEventListener('pointerdown',event=>{const r=canvas.getBoundingClientRect();canvas.dataset.hit=JSON.stringify([(event.clientX-r.left)*canvas.width/r.width,(event.clientY-r.top)*canvas.height/r.height]);});
+        addEventListener('message',event=>{if(event.source!==parent||event.data?.type!=='test-snapshot')return;const c=document.getElementById('GameCanvas'),r=c.getBoundingClientRect(),root=document.getElementById('GameDiv').getBoundingClientRect();parent.postMessage({type:'test-snapshot-result',token:event.data.token,snapshot:{canvas:[r.x,r.y,r.width,r.height],root:[root.width,root.height],backing:[c.width,c.height],viewport:[innerWidth,innerHeight],hit:c.dataset.hit}},'*');});
+        </script><script>${script}</script>`);
+      else if (req.url === '/mist-wrapper') res.end(`<body style="margin:10px;padding:10px"><iframe id="frm1" style="border:0" width="1252" height="740" scrolling="no" allowfullscreen="true" src="http://localhost:${server.address().port}/mist-client"></iframe><div id="mist-banner">BANNER BELOW FRM1</div><script>addEventListener('message',event=>{const child=document.getElementById('frm1');if(event.source===parent&&event.data?.type==='test-snapshot')child.contentWindow.postMessage(event.data,'*');if(event.source===child.contentWindow&&event.data?.type==='test-snapshot-result')parent.postMessage(event.data,'*');});</script><script>${script}</script>`);
+      else if (req.url === '/mist') res.end(`<body style="margin:0"><iframe id="game_frame" src="/mist-wrapper" style="width:1280px;height:720px;border:0"></iframe><script>${script}</script>`);
+      else if (req.url === '/child') res.end(`<body style="margin:20px;padding:15px;background:#567"><div id="GameDiv" style="width:640px;height:360px;margin:25px auto;border:4px solid red"><div id="Cocos2dGameContainer" style="width:640px;height:360px"><canvas id="GameCanvas" width="640" height="360" style="width:640px;height:360px"></canvas></div></div><div id="inner-banner">INNER BANNER</div><script>
         const canvas=document.getElementById('GameCanvas');
         canvas.addEventListener('pointerdown',event=>{const r=canvas.getBoundingClientRect();window.lastHit=[(event.clientX-r.left)*canvas.width/r.width,(event.clientY-r.top)*canvas.height/r.height]});
         </script><script>${script}</script>`);
@@ -29,7 +36,7 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
     let id = 0; const callbacks = new Map();
     socket.addEventListener('message', ({ data }) => { const message = JSON.parse(data); if (callbacks.has(message.id)) { const cb = callbacks.get(message.id); callbacks.delete(message.id); message.error ? cb.reject(message.error) : cb.resolve(message.result); } });
     const send = (method, params = {}) => new Promise((resolve, reject) => { const key = ++id; callbacks.set(key, { resolve, reject }); socket.send(JSON.stringify({ id: key, method, params })); });
-    const evaluate = async (expression, userGesture = false) => { const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture }); if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails)); return result.result.value; };
+    const evaluate = async (expression, userGesture = false, contextId) => { const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true, userGesture, contextId }); if (result.exceptionDetails) throw new Error(JSON.stringify(result.exceptionDetails)); return result.result.value; };
     await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
     await send('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/` });
     for (let i = 0; i < 50 && !await evaluate('!!document.getElementById("dmm-fullscreen-control")'); i++) await delay(100);
@@ -62,6 +69,34 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
     assert.deepEqual(before.canvas,after.canvas); assert.notEqual(after.innerBanner,'none');
     assert.equal(before.top, after.top); assert.equal(before.height, after.height); assert.notEqual(after.banner, 'none');
     console.log(JSON.stringify({ trigger, before, fullscreen: full, inner, hit, after }));
+    // Reproduce Mist's extra frm1 layer and fixed 1136x640 CSS, with the game
+    // served from another origin. Only postMessage crosses this boundary.
+    await send('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/mist`});
+    for(let i=0;i<100&&!await evaluate('!!document.getElementById("dmm-fullscreen-control")');i++) await delay(50);
+    await evaluate(`window.inspectMist=()=>new Promise((resolve,reject)=>{const frame=document.getElementById('game_frame'),token=Math.random();const handler=event=>{if(event.source!==frame.contentWindow||event.data?.type!=='test-snapshot-result'||event.data.token!==token)return;removeEventListener('message',handler);clearTimeout(timeout);resolve(event.data.snapshot);};const timeout=setTimeout(()=>{removeEventListener('message',handler);reject(new Error('Mist snapshot timed out'));},3000);addEventListener('message',handler);frame.contentWindow.postMessage({type:'test-snapshot',token},'*');});`);
+    // Cross-origin inspection is relayed explicitly by the test fixtures, just
+    // like the production layout protocol. No access to child DOM is granted.
+    const snapshot=()=>evaluate('window.inspectMist()');
+    const mistBefore=await snapshot();
+    assert.deepEqual(mistBefore.root,[1136,640]);
+    assert.equal(await evaluate(`document.getElementById('game_frame').contentDocument.getElementById('frm1').contentDocument===null`),true);
+    await evaluate('document.getElementById("dmm-fullscreen-control").shadowRoot.querySelector("button").click()',true);
+    let mistFull;
+    for(let i=0;i<100;i++) { mistFull=await snapshot();if(mistFull.canvas[2]===1280&&mistFull.canvas[3]===720) break;await delay(50); }
+    assert.deepEqual(mistFull.canvas,[0,0,1280,720]);assert.deepEqual(mistFull.root,[1280,720]);
+    assert.deepEqual(mistFull.backing,[2130,1200]);assert.deepEqual(mistFull.viewport,[1280,720]);
+    const middle=await evaluate(`(() => {const d=document.getElementById('game_frame').contentDocument,f=d.getElementById('frm1'),r=f.getBoundingClientRect();return {rect:[r.x,r.y,r.width,r.height],banner:getComputedStyle(d.getElementById('mist-banner')).display,controls:d.querySelectorAll('#dmm-fullscreen-control').length};})()`);
+    assert.deepEqual(middle.rect,[0,0,1280,720]);assert.equal(middle.banner,'none');assert.equal(middle.controls,0);
+    await send('Input.dispatchMouseEvent',{type:'mousePressed',x:320,y:220,button:'left',clickCount:1});
+    await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:320,y:220,button:'left',clickCount:1});
+    assert.deepEqual(JSON.parse((await snapshot()).hit),[532.5,300]);
+    await evaluate('document.exitFullscreen()');
+    let mistAfter;
+    for(let i=0;i<100;i++){mistAfter=await snapshot();if(mistAfter.root[0]===1136&&mistAfter.root[1]===640) break;await delay(50);}
+    assert.deepEqual(mistAfter.canvas,mistBefore.canvas);assert.deepEqual(mistAfter.root,mistBefore.root);
+    assert.equal(await evaluate(`getComputedStyle(document.getElementById('game_frame').contentDocument.getElementById('mist-banner')).display`),'block');
+    console.log(JSON.stringify({mistBefore,mistFull,middle,mistAfter}));
+
   } finally {
     socket?.close(); browser?.kill(); server?.close();
     await delay(500);
