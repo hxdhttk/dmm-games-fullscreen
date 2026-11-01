@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.19
+// @version      0.20
 // @description  Hover to enter fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -198,9 +198,68 @@
     return byId("GameDiv") || byId("GameCanvas") || byId("unity-canvas") || byId("frm1") || byId("game-iframe") || byId("cocos_frame") || byId("game_frame");
   }
 
+  function installMistInputMapping(state, canvas) {
+    if (!isMist || !canvas || state.inputCleanup) return;
+    const cc = window.cc;
+    const view = cc?.view;
+    const manager = cc?.internal?.inputManager;
+    if (cc?.game?.canvas !== canvas || typeof view?.convertToLocationInView !== "function" ||
+        typeof view?._convertMouseToLocationInView !== "function" ||
+        typeof manager?._updateCanvasBoundingRect !== "function") return;
+
+    // Mist's Cocos 2.3.2 multiplies CSS mouse/touch distances by its cached DPR.
+    // A CSS-resized canvas can have a different backing-pixels/CSS-pixels ratio.
+    // Normalize at the view boundary so its existing viewport/design transforms
+    // still run, and all listeners receive the same corrected coordinates.
+    const normalize = (x, y, position, adjusted) => {
+      manager._updateCanvasBoundingRect();
+      const rect = canvas.getBoundingClientRect();
+      const dpr = typeof view.getDevicePixelRatio === "function" ? view.getDevicePixelRatio() : view._devicePixelRatio;
+      if (!remoteActive || view._isRotated || !(rect.width > 0 && rect.height > 0 && dpr > 0 && canvas.width > 0 && canvas.height > 0)) return [x, y];
+      const left = adjusted && position.adjustedLeft ? position.adjustedLeft : position.left;
+      const top = adjusted && position.adjustedTop ? position.adjustedTop : position.top;
+      const bottom = top + position.height;
+      return [
+        left + (x - left) * canvas.width / rect.width / dpr,
+        bottom - (bottom - y) * canvas.height / rect.height / dpr,
+      ];
+    };
+    const patches = [];
+    const patch = (name, factory) => {
+      const descriptor = Object.getOwnPropertyDescriptor(view, name);
+      const original = view[name];
+      const wrapper = factory(original);
+      view[name] = wrapper;
+      patches.push(() => {
+        if (view[name] !== wrapper) return;
+        if (descriptor) Object.defineProperty(view, name, descriptor);
+        else delete view[name];
+      });
+    };
+    patch("convertToLocationInView", (original) => function (x, y, position, ...rest) {
+      const point = normalize(x, y, position, true);
+      return original.call(this, point[0], point[1], position, ...rest);
+    });
+    patch("_convertMouseToLocationInView", (original) => function (point, position, ...rest) {
+      const normalized = normalize(point.x, point.y, position, false);
+      point.x = normalized[0];
+      point.y = normalized[1];
+      return original.call(this, point, position, ...rest);
+    });
+    const refresh = () => manager._updateCanvasBoundingRect();
+    const events = ["mousedown", "mousemove", "mouseup", "wheel", "touchstart", "touchmove", "touchend", "touchcancel"];
+    events.forEach((name) => window.addEventListener(name, refresh, { capture: true, passive: true }));
+    state.inputCleanup = () => {
+      patches.reverse().forEach((restore) => restore());
+      events.forEach((name) => window.removeEventListener(name, refresh, true));
+    };
+    refresh();
+  }
+
   function restoreContent() {
     if (!contentSession) return;
     sendLayout(contentSession.element, false);
+    contentSession.inputCleanup?.();
     const { engine, engineSize, saved } = contentSession;
     if (engine && engineSize) {
       try { engine.setFrameSize(engineSize.width, engineSize.height); } catch (error) { console.warn("Restore game view:", error); }
@@ -210,6 +269,7 @@
       else element.style.removeProperty(name);
     }
     contentSession = null;
+    window.cc?.internal?.inputManager?._updateCanvasBoundingRect?.();
   }
 
   function fitContent() {
@@ -262,6 +322,7 @@
       catch (error) { console.warn("Resize game view:", error); }
     }
     if (canvas === element) set(canvas, { "object-fit":"contain" });
+    installMistInputMapping(state, canvas);
     sendLayout(element, true);
   }
 

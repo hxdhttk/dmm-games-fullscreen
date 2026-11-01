@@ -22,7 +22,7 @@ function setup({ href = 'https://play.games.dmm.co.jp/game/MistTrainGirlsX', emb
   const document = { fullscreenEnabled: enabled, documentElement: { clientWidth: 1400, appendChild(node) { nodes.set(node.id, node); if (node.id === 'dmm-fullscreen-control') mounts++; } }, body,
     getElementById: (id) => nodes.get(id), querySelectorAll: () => [...nodes.values()].filter((node) => node.tagName === 'IFRAME'),
     addEventListener: (name, cb) => { events[name] = cb; }, createElement: (tag) => element(tag.toUpperCase()) };
-  const window = { innerWidth: 1280, innerHeight: 800, scrollX: 0, scrollY: 0, parent: { postMessage() {} }, addEventListener: (name, cb) => { events[name] = cb; } };
+  const window = { innerWidth: 1280, innerHeight: 800, scrollX: 0, scrollY: 0, parent: { postMessage() {} }, addEventListener: (name, cb) => { events[name] = cb; }, removeEventListener() {} };
   window.top = embedded ? {} : window;
   const context = vm.createContext({ document, window, location: { href }, URL,
     requestAnimationFrame: (cb) => { pending.push(cb); return pending.length; }, cancelAnimationFrame() {},
@@ -129,4 +129,48 @@ test('Mist intermediate frm1 relays layout and late readiness without a second b
   app.events.message({source:app.window.parent,data:{type:'dmm-fullscreen-layout-v1',active:false}});app.flush();
   assert.equal(child.style.width,undefined);
   assert.ok(messages.some(m=>m.type==='dmm-fullscreen-layout-v1'&&!m.active));
+});
+
+test('Mist Cocos mouse/touch mapping matches rendering at multiple points, DPI values and viewport offsets', () => {
+  for (const dpr of [1,1.25,1.875,2]) {
+    const app=setup({href:'https://assets4.mist-train-girls.com/production-client-web/307/index.html?platform=dmm',embedded:true});
+    app.window.innerWidth=2560;app.window.innerHeight=1600;
+    const root=app.add('GameDiv','DIV'),canvas=app.add('GameCanvas','CANVAS',root);
+    canvas.width=2130;canvas.height=1200;
+    const rect={left:30,top:50,width:2560,height:1440};
+    canvas.getBoundingClientRect=()=>rect;
+    const position={left:0,top:0,width:1136,height:640};
+    const manager={_updateCanvasBoundingRect:()=>Object.assign(position,rect)};
+    // These are the formulas in Mist's public Cocos 2.3.2 client, not the
+    // browser fixture's already-correct canvas.width / rect.width handler.
+    const view={_devicePixelRatio:dpr,_viewportRect:{x:20,y:40},_scaleX:1.5,_scaleY:2,
+      getFrameSize:()=>({width:1136,height:640}),setFrameSize(){},getDevicePixelRatio(){return this._devicePixelRatio;},
+      convertToLocationInView(x,y,p,out={}){const left=p.adjustedLeft?p.adjustedLeft:p.left,top=p.adjustedTop?p.adjustedTop:p.top;out.x=this._devicePixelRatio*(x-left);out.y=this._devicePixelRatio*(top+p.height-y);return out;},
+      _convertMouseToLocationInView(point,p){point.x=(this._devicePixelRatio*(point.x-p.left)-this._viewportRect.x)/this._scaleX;point.y=(this._devicePixelRatio*(p.top+p.height-point.y)-this._viewportRect.y)/this._scaleY;}
+    };
+    const originalMouse=view._convertMouseToLocationInView,originalTouch=view.convertToLocationInView;
+    app.window.cc={game:{canvas},view,internal:{inputManager:manager}};
+    const message=active=>{app.events.message({source:app.window.parent,data:{type:'dmm-fullscreen-layout-v1',active}});app.flush();};
+    manager._updateCanvasBoundingRect();
+    const oldPoint={x:rect.left+rect.width/2,y:rect.top+rect.height/2};
+    originalMouse.call(view,oldPoint,position);
+    const oldRenderedX=rect.left+(oldPoint.x*view._scaleX+view._viewportRect.x)/canvas.width*rect.width;
+    assert.ok(Math.abs(oldRenderedX-(rect.left+rect.width/2))>1,'fixture must reproduce a scale error before correction');
+    message(true);
+    for(const [fx,fy] of [[0,0],[0.1,0.1],[0.5,0.5],[0.9,0.9],[1,1]]){
+      const x=rect.left+fx*rect.width,y=rect.top+fy*rect.height;
+      const mouse={x,y};view._convertMouseToLocationInView(mouse,position);
+      const renderedX=rect.left+(mouse.x*view._scaleX+view._viewportRect.x)/canvas.width*rect.width;
+      const renderedY=rect.top+rect.height-(mouse.y*view._scaleY+view._viewportRect.y)/canvas.height*rect.height;
+      assert.ok(Math.abs(renderedX-x)<1e-8);assert.ok(Math.abs(renderedY-y)<1e-8);
+      const out={};assert.equal(view.convertToLocationInView(x,y,position,out),out);
+      assert.ok(Math.abs(out.x-fx*canvas.width)<1e-8);assert.ok(Math.abs(out.y-(1-fy)*canvas.height)<1e-8);
+    }
+    app.window.scrollX=100;app.window.scrollY=200;
+    position.adjustedLeft=30;position.adjustedTop=50;
+    const touch=view.convertToLocationInView(1310,770,position);
+    assert.equal(touch.x,1065);assert.equal(touch.y,600);
+    message(false);
+    assert.equal(view._convertMouseToLocationInView,originalMouse);assert.equal(view.convertToLocationInView,originalTouch);
+  }
 });
