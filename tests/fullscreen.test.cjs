@@ -18,7 +18,7 @@ function setup({ href = 'https://play.games.dmm.co.jp/game/MistTrainGirlsX', emb
     };
   };
   const body = element('BODY');
-  const document = { fullscreenEnabled: enabled, documentElement: { clientWidth: 1400 }, body,
+  const document = { fullscreenEnabled: enabled, documentElement: { clientWidth: 1400, appendChild(node) { nodes.set(node.id, node); if (node.id === 'dmm-fullscreen-control') mounts++; } }, body,
     getElementById: (id) => nodes.get(id), querySelectorAll: () => [...nodes.values()].filter((node) => node.tagName === 'IFRAME'),
     addEventListener: (name, cb) => { events[name] = cb; }, createElement: (tag) => element(tag.toUpperCase()) };
   const window = { innerWidth: 1280, innerHeight: 800, scrollX: 0, scrollY: 0, parent: { postMessage() {} }, addEventListener: (name, cb) => { events[name] = cb; } };
@@ -33,16 +33,16 @@ function setup({ href = 'https://play.games.dmm.co.jp/game/MistTrainGirlsX', emb
   const enter = (stage = body) => { stage.requestFullscreen = async () => { document.fullscreenElement = stage; events.fullscreenchange(); }; };
   return { document, nodes, events, window, element, body, flush, add, click, enter, mutate: () => mutation(), mounts: () => mounts };
 }
-test('15px control stays outside game and never occupies normal flow', () => {
+test('small control prefers outside space, stays in viewport and never occupies normal flow', () => {
   const app = setup(); app.flush(); assert.equal(app.mounts(), 0);
   const game = app.add('game_frame'); app.mutate(); app.flush();
   const host = app.nodes.get('dmm-fullscreen-control');
-  assert.match(host.style.cssText, /position:absolute/); assert.match(host.style.cssText, /width:15px/);
-  assert.equal(host.style.left, '1303px'); assert.equal(host.style.top, '80px');
+  assert.match(host.style.cssText, /position:fixed/); assert.match(host.style.cssText, /width:19px/);
+  assert.equal(host.style.left, '1304px'); assert.equal(host.style.top, '80px');
   assert.equal(game.style.width, undefined);
   app.mutate(); app.flush(); assert.equal(app.mounts(), 1);
   app.document.documentElement.clientWidth = 1300; app.events.resize(); app.flush();
-  assert.equal(host.style.top, '62px');
+  assert.equal(host.style.top, '57px');
 });
 test('Mist gets a real 16:9 iframe viewport on a 16:10 screen; banner and original styles restore', async () => {
   const app = setup(); const game = app.add('game_frame'); const banner = app.add('banner', 'DIV');
@@ -84,3 +84,15 @@ test('child ownership suppresses ancestor button and ignores messages from unkno
   assert.equal(host.style.display, 'none');
 });
 
+
+test('embedded edge-to-edge game keeps trigger inside iframe viewport', () => {
+  const app = setup({ href: 'https://www.dmm.co.jp/game/deeponer', embedded: true });
+  app.document.documentElement.clientWidth = 1280;
+  const game = app.add('game-iframe');
+  game.getBoundingClientRect = () => ({left:0,top:0,right:1280,bottom:800,width:1280,height:800});
+  app.flush(); const host = app.nodes.get('dmm-fullscreen-control');
+  assert.equal(host.style.left, '1257px'); assert.equal(host.style.top, '4px');
+  assert.equal(host.getAttribute('popover'), 'manual');
+  app.window.scrollY = 1000; app.events.scroll(); app.flush();
+  assert.equal(host.style.top, '4px');
+});

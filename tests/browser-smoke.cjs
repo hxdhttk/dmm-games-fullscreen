@@ -30,6 +30,18 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
     await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false });
     await send('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/` });
     for (let i = 0; i < 50 && !await evaluate('!!document.getElementById("dmm-fullscreen-control")'); i++) await delay(100);
+    const trigger = await evaluate(`(() => {
+      const cover = document.createElement('div');
+      cover.style.cssText='position:fixed;inset:0;z-index:2147483647;background:transparent';
+      document.body.appendChild(cover);
+      const host = document.getElementById('dmm-fullscreen-control');
+      const r = host.getBoundingClientRect();
+      const result = {topLayer:host.matches(':popover-open'),hit:document.elementFromPoint(r.x+9,r.y+9)===host,x:r.x,y:r.y,width:r.width,height:r.height};
+      cover.remove(); return result;
+    })()`);
+    assert.equal(trigger.topLayer, true); assert.equal(trigger.hit, true);
+    assert.equal(trigger.width, 19); assert.equal(trigger.height, 19);
+    assert.ok(trigger.x>=0 && trigger.x+19<=1280 && trigger.y>=0 && trigger.y+19<=800);
     const before = await evaluate('({ top:document.getElementById("game-iframe").getBoundingClientRect().top, height:document.getElementById("game-iframe").getBoundingClientRect().height })');
     await evaluate('document.getElementById("dmm-fullscreen-control").shadowRoot.querySelector("button").click()', true);
     await delay(500);
@@ -38,7 +50,7 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
     await evaluate('document.exitFullscreen()'); await delay(200);
     const after = await evaluate('({top:document.getElementById("game-iframe").getBoundingClientRect().top,height:document.getElementById("game-iframe").getBoundingClientRect().height,banner:getComputedStyle(document.getElementById("banner")).display})');
     assert.equal(before.top, after.top); assert.equal(before.height, after.height); assert.notEqual(after.banner, 'none');
-    console.log(JSON.stringify({ before, fullscreen: full, after }));
+    console.log(JSON.stringify({ trigger, before, fullscreen: full, after }));
   } finally {
     socket?.close(); browser?.kill(); server?.close();
     await delay(500);

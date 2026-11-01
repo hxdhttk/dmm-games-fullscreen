@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DMM Games Fullscreen
 // @namespace    http://tampermonkey.net/
-// @version      0.16
+// @version      0.17
 // @description  Hover to enter fullscreen on DMM browser games.
 // @author       Me
 // @match        *://*.dmm.co.jp/*
@@ -69,13 +69,20 @@
   function mountControl() {
     host = document.createElement("div");
     host.id = CONTROL_ID;
-    host.style.cssText = "position:absolute!important;width:15px!important;height:15px!important;margin:0!important;padding:0!important;z-index:2147483647!important;";
+    host.style.cssText = "all:initial!important;position:fixed!important;inset:auto!important;width:19px!important;height:19px!important;margin:0!important;padding:0!important;border:0!important;overflow:visible!important;box-sizing:border-box!important;z-index:2147483647!important;";
+    // A manual popover escapes ancestor clipping and ordinary stacking contexts.
+    // It remains non-modal and does not steal focus or block the game.
+    host.setAttribute("popover", "manual");
     const shadow = host.attachShadow({ mode: "open" });
     shadow.innerHTML = `
       <style>
         :host { color-scheme:dark; }
+        :host::before { content:""; position:absolute; width:3px; height:3px;
+          right:1px; top:1px; border-radius:50%; background:#93c5fd;
+          box-shadow:0 0 0 1px #17243baa; pointer-events:none; }
+        :host(:hover)::before, :host(:focus-within)::before { opacity:0; }
         button { box-sizing:border-box; display:grid; place-items:center;
-          width:15px; height:15px; margin:0; padding:0; border:0; border-radius:3px;
+          width:15px; height:15px; margin:2px; padding:0; border:0; border-radius:3px;
           color:#dbeafe; background:#17243bd9; cursor:pointer; opacity:0;
           box-shadow:0 1px 4px #0005; transition:opacity .15s,background .15s; }
         :host(:hover) button, button:focus-visible { opacity:1; }
@@ -116,21 +123,31 @@
         schedule();
       }
     });
-    document.body.appendChild(host);
+    document.documentElement.appendChild(host);
+    try { host.showPopover?.(); } catch { /* Fixed-position fallback on older browsers. */ }
   }
 
   function placeControl() {
     const rect = target.getBoundingClientRect();
-    // Prefer the right margin; otherwise the gap above/below the game. No strip
-    // in normal flow and no invisible hit area over the game's controls.
-    let left = rect.right + 3;
-    let top = rect.top;
-    if (left + 15 > document.documentElement.clientWidth) {
-      left = Math.max(0, rect.right - 15);
-      top = rect.top >= 18 ? rect.top - 18 : rect.bottom + 3;
-    }
-    host.style.setProperty("left", `${left + window.scrollX}px`, "important");
-    host.style.setProperty("top", `${top + window.scrollY}px`, "important");
+    const size = 19;
+    const gap = 4;
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    // Coordinates are local to this document's viewport. An embedded document
+    // cannot draw outside its iframe, even with a huge z-index or a popover.
+    const candidates = [
+      [rect.right + gap, rect.top],
+      [Math.max(gap, Math.min(rect.right - size, viewportWidth - size - gap)), rect.top - size - gap],
+      [rect.left - size - gap, rect.top],
+      [rect.right - size, rect.bottom + gap],
+    ];
+    const fits = ([x, y]) => x >= gap && y >= gap && x + size <= viewportWidth - gap && y + size <= viewportHeight - gap;
+    const [left, top] = candidates.find(fits) || [
+      Math.max(gap, viewportWidth - size - gap),
+      Math.max(gap, Math.min(rect.top, viewportHeight - size - gap)),
+    ];
+    host.style.setProperty("left", `${left}px`, "important");
+    host.style.setProperty("top", `${top}px`, "important");
   }
 
   function saveStyles(element, properties) {
