@@ -1,17 +1,29 @@
 # DMM Games Fullscreen
 
-安装 Tampermonkey 后，将 `dmm-games-fullscreen.user.js` 导入为用户脚本。
+安装 Tampermonkey 后，将 `dmm-games-fullscreen.user.js` 导入为用户脚本。升级至 0.16 后请完整刷新游戏页面，并确认只启用一份脚本。
 
-- 游戏元素前方预留 60 像素独立工具栏，鼠标悬停工具栏左侧时显示全屏按钮，移开后淡出；工具栏随游戏所在页面滚动。
-- 点击进入游戏全屏，按 Esc 退出。键盘 Tab 聚焦时也显示按钮；触屏设备保持可见。
-- 全屏请求失败时，在按钮下显示错误原因。
-- 适配通用 DMM iframe、Mist Train Girls、Deep One、Sweet Home Maid，以及 Unity / Cocos 画布。
-- 窗口模式保留游戏原有布局，不修改 Canvas 绘制分辨率或内部容器尺寸。Mist / Deep One 全屏保持 16:9，其他游戏使用进入全屏前的元素比例，居中留黑边；退出时恢复修改过的样式。
+- 全屏入口为 15 × 15px 图标，无文字或额外悬停区域。优先放在游戏右侧空隙，空间不足时放在游戏上方或下方，不占文档布局、不挤动游戏。
+- 鼠标悬停图标时显示，离开后隐藏；键盘 Tab 聚焦时显示，触屏设备保持可见。点击全屏，Esc 退出。
+- Mist 使用外层游戏 iframe，在现有父容器中全屏，并给 iframe 分配居中的 16:9 视口。在 16:10 屏幕上上下留黑边。
+- Deep One 使用含 `game-iframe` 的中间页面作为控制入口。外层 `game_frame` 页面及内层渲染页不重复生成按钮；有子页面接管时隐藏祖先页面入口。
+- 全屏时临时隐藏游戏元素的同级 banner 等内容，退出恢复原有样式。iframe 不移动、不重新加载；不修改 Canvas 绘制分辨率。游戏 iframe 内的内容仍由游戏页面管理。
+- 为已识别的游戏 iframe 补充全屏委派属性；服务器的权限策略仍可能限制全屏。权限被禁用的页面不生成无效入口，请求失败时显示错误信息。
 
 ## 验证
 
-运行 `node --check dmm-games-fullscreen.user.js` 和 `node --test tests/fullscreen.test.cjs`。
+运行：
 
-真实页面验收：检查悬停显示、移开隐藏、Tab 聚焦、点击全屏、Esc 恢复、仅改变窗口高度、延迟加载和游戏重新加载。跨域 iframe 能否全屏取决于宿主页面权限。全屏中通过 Esc 退出，按钮不覆盖游戏画面。
+```sh
+node --check dmm-games-fullscreen.user.js
+node --test tests/fullscreen.test.cjs
+```
 
-升级至 0.15 后请完整刷新游戏页面，清除旧版已经写入的画布尺寸。自动化测试使用模拟 DOM，不代表真实游戏引擎、跨域 iframe 或鼠标坐标已验证。
+在安装了 Microsoft Edge 的 Windows 上，可以额外运行：
+
+```sh
+node tests/browser-smoke.cjs
+```
+
+浏览器检查使用本地测试页面、临时浏览器配置及本机调试端口，验证真实全屏、iframe 内部视口为 16:9、同级 banner 隐藏以及退出后布局恢复。
+
+真实游戏页面仍需验收：Mist 在 16:10 屏幕上的显示、Deep One 唯一入口及鼠标坐标、按钮随页面滚动的位置，以及浏览器全屏权限。本地测试不能替代登录后的真实游戏引擎验证。
